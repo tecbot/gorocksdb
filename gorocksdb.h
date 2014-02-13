@@ -9,19 +9,19 @@ extern void gorocksdb_destruct_handler(void* handler);
 
 /* Comparator */
 
-extern rocksdb_comparator_t* gorocksdb_comparator_create(void* handler);
+extern rocksdb_comparator_t* gorocksdb_comparator_create(size_t id);
 
 /* Filter Policy */
 
-extern rocksdb_filterpolicy_t* gorocksdb_filterpolicy_create(void* handler);
+extern rocksdb_filterpolicy_t* gorocksdb_filterpolicy_create(size_t id);
 
 /* Merge Operator */
 
-extern rocksdb_mergeoperator_t* gorocksdb_mergeoperator_create(void* handler);
+extern rocksdb_mergeoperator_t* gorocksdb_mergeoperator_create(size_t id);
 
 /* Slice Transform */
 
-extern rocksdb_slicetransform_t* gorocksdb_slicetransform_create(void* handler);
+extern rocksdb_slicetransform_t* gorocksdb_slicetransform_create(size_t id);
 
 /* Hacks */
 

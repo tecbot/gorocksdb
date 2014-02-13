@@ -1,25 +1,33 @@
 package gorocksdb
 
 import (
+	"bytes"
 	. "github.com/smartystreets/goconvey/convey"
 	"os"
 	"testing"
 )
 
 type testFilterPolicyHandler struct {
-	called bool
+	numKeys   int
+	initiated bool
 }
 
 func (self *testFilterPolicyHandler) CreateFilter(keys [][]byte) []byte {
-	return make([]byte, len(keys))
+	filter := []byte{}
+	for _, key := range keys {
+		filter = append(filter, key...)
+		self.numKeys++
+	}
+
+	return filter
 }
 
 func (self *testFilterPolicyHandler) KeyMayMatch(key []byte, filter []byte) bool {
-	return true
+	return bytes.Contains(filter, key)
 }
 
 func (self *testFilterPolicyHandler) Name() string {
-	self.called = true
+	self.initiated = true
 	return "gorocksdb.test"
 }
 
@@ -36,11 +44,19 @@ func TestNewFilterPolicy(t *testing.T) {
 				DestroyDb(dbName, options)
 				options.SetCreateIfMissing(true)
 				options.SetFilterPolicy(policy)
-				_, err := OpenDb(options, dbName)
-				if err != nil {
-					panic(err)
-				}
-				So(handler.called, ShouldBeTrue)
+
+				db, err := OpenDb(options, dbName)
+				So(err, ShouldBeNil)
+				So(handler.initiated, ShouldBeTrue)
+
+				Convey("When put 3 key to the db then the filter should receive 3 keys after a flush", func() {
+					wo := NewDefaultWriteOptions()
+					So(db.Put(wo, []byte("key1"), []byte("value1")), ShouldBeNil)
+					So(db.Put(wo, []byte("key2"), []byte("value2")), ShouldBeNil)
+					So(db.Put(wo, []byte("key3"), []byte("value3")), ShouldBeNil)
+					So(db.Flush(NewDefaultFlushOptions()), ShouldBeNil)
+					So(handler.numKeys, ShouldEqual, 3)
+				})
 			})
 		})
 	})

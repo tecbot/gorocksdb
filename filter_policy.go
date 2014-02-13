@@ -4,9 +4,8 @@ package gorocksdb
 // #include "gorocksdb.h"
 import "C"
 
-import (
-	"unsafe"
-)
+var filterHandlers = make(map[int]FilterPolicyHandler)
+var filterNextId int
 
 // FilterPolicy is a factory type that allows the RocksDB database to create a
 // filter, such as a bloom filter, which will used to reduce reads.
@@ -32,7 +31,11 @@ type FilterPolicyHandler interface {
 
 // NewFilterPolicy creates a new filter policy for the given handler.
 func NewFilterPolicy(handler FilterPolicyHandler) *FilterPolicy {
-	return NewNativeFilterPolicy(C.gorocksdb_filterpolicy_create(unsafe.Pointer(&handler)))
+	filterNextId++
+	id := filterNextId
+	filterHandlers[id] = handler
+
+	return NewNativeFilterPolicy(C.gorocksdb_filterpolicy_create(C.size_t(id)))
 }
 
 // Return a new filter policy that uses a bloom filter with approximately
@@ -62,7 +65,7 @@ func (self *FilterPolicy) Destroy() {
 }
 
 //export gorocksdb_filterpolicy_create_filter
-func gorocksdb_filterpolicy_create_filter(cHandler unsafe.Pointer, cKeys **C.char, cKeysLen *C.size_t, cNumKeys C.int, cDstLen *C.size_t) *C.char {
+func gorocksdb_filterpolicy_create_filter(id int, cKeys **C.char, cKeysLen *C.size_t, cNumKeys C.int, cDstLen *C.size_t) *C.char {
 	keys := make([][]byte, int(cNumKeys))
 	for i, l := 0, int(cNumKeys); i < l; i++ {
 		cKey := C.gorocksdb_get_char_at_index(cKeys, C.int(i))
@@ -71,7 +74,7 @@ func gorocksdb_filterpolicy_create_filter(cHandler unsafe.Pointer, cKeys **C.cha
 		keys[i] = CharToByte(cKey, cKeyLen)
 	}
 
-	var handler FilterPolicyHandler = *(*FilterPolicyHandler)(cHandler)
+	handler := filterHandlers[id]
 	dst := handler.CreateFilter(keys)
 
 	*cDstLen = C.size_t(len(dst))
@@ -80,19 +83,19 @@ func gorocksdb_filterpolicy_create_filter(cHandler unsafe.Pointer, cKeys **C.cha
 }
 
 //export gorocksdb_filterpolicy_key_may_match
-func gorocksdb_filterpolicy_key_may_match(cHandler unsafe.Pointer, cKey *C.char, cKeyLen C.size_t, cFilter *C.char, cFilterLen C.size_t) C.uchar {
+func gorocksdb_filterpolicy_key_may_match(id int, cKey *C.char, cKeyLen C.size_t, cFilter *C.char, cFilterLen C.size_t) C.uchar {
 	key := CharToByte(cKey, cKeyLen)
 	filter := CharToByte(cFilter, cFilterLen)
 
-	var handler FilterPolicyHandler = *(*FilterPolicyHandler)(cHandler)
+	handler := filterHandlers[id]
 	match := handler.KeyMayMatch(key, filter)
 
 	return BoolToChar(match)
 }
 
 //export gorocksdb_filterpolicy_name
-func gorocksdb_filterpolicy_name(cHandler unsafe.Pointer) *C.char {
-	var handler FilterPolicyHandler = *(*FilterPolicyHandler)(cHandler)
+func gorocksdb_filterpolicy_name(id int) *C.char {
+	handler := filterHandlers[id]
 
 	return StringToChar(handler.Name())
 }

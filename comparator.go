@@ -4,9 +4,8 @@ package gorocksdb
 // #include "gorocksdb.h"
 import "C"
 
-import (
-	"unsafe"
-)
+var cmpHandlers = make(map[int]ComparatorHandler)
+var cmpNextId int
 
 // A Comparator object provides a total order across slices that are
 // used as keys in an sstable or a database.
@@ -19,7 +18,7 @@ type ComparatorHandler interface {
 	//   < 0 iff "a" < "b",
 	//   == 0 iff "a" == "b",
 	//   > 0 iff "a" > "b"
-	Compare(a []byte, b []byte) int
+	Compare(a, b []byte) int
 
 	// The name of the comparator.
 	Name() string
@@ -27,7 +26,11 @@ type ComparatorHandler interface {
 
 // NewComparator creates a new comparator for the given handler.
 func NewComparator(handler ComparatorHandler) *Comparator {
-	return NewNativeComparator(C.gorocksdb_comparator_create(unsafe.Pointer(&handler)))
+	cmpNextId++
+	id := cmpNextId
+	cmpHandlers[id] = handler
+
+	return NewNativeComparator(C.gorocksdb_comparator_create(C.size_t(id)))
 }
 
 // NewNativeComparator allocates a Comparator object.
@@ -38,22 +41,23 @@ func NewNativeComparator(c *C.rocksdb_comparator_t) *Comparator {
 // Destroy deallocates the Comparator object.
 func (self *Comparator) Destroy() {
 	C.rocksdb_comparator_destroy(self.c)
+	self.c = nil
 }
 
 //export gorocksdb_comparator_compare
-func gorocksdb_comparator_compare(cHandler unsafe.Pointer, cKeyA *C.char, cKeyALen C.size_t, cKeyB *C.char, cKeyBLen C.size_t) C.int {
+func gorocksdb_comparator_compare(id int, cKeyA *C.char, cKeyALen C.size_t, cKeyB *C.char, cKeyBLen C.size_t) C.int {
 	keyA := CharToByte(cKeyA, cKeyALen)
 	keyB := CharToByte(cKeyB, cKeyBLen)
 
-	var handler ComparatorHandler = *(*ComparatorHandler)(cHandler)
+	handler := cmpHandlers[id]
 	compare := handler.Compare(keyA, keyB)
 
 	return C.int(compare)
 }
 
 //export gorocksdb_comparator_name
-func gorocksdb_comparator_name(cHandler unsafe.Pointer) *C.char {
-	var handler ComparatorHandler = *(*ComparatorHandler)(cHandler)
+func gorocksdb_comparator_name(id int) *C.char {
+	handler := cmpHandlers[id]
 
 	return StringToChar(handler.Name())
 }
