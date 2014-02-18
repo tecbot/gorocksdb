@@ -60,3 +60,34 @@ func TestNewMergeOperator(t *testing.T) {
 		})
 	})
 }
+
+func TestMergeOperatorNonExisitingValue(t *testing.T) {
+	dbName := os.TempDir() + "/TestMergeOperatorNonExisitingValue"
+
+	Convey("Subject: Merge of a non-existing value", t, func() {
+		handler := &testMergeOperatorHandler{}
+		merger := NewMergeOperator(handler)
+
+		options := NewDefaultOptions()
+		DestroyDb(dbName, options)
+		options.SetCreateIfMissing(true)
+		options.SetMergeOperator(merger)
+		options.SetMaxSuccessiveMerges(5)
+
+		db, err := OpenDb(options, dbName)
+		So(err, ShouldBeNil)
+		So(handler.initiated, ShouldBeTrue)
+
+		Convey("When merge a non-existing value with 'bar' then the new value should be 'bar'", func() {
+			wo := NewDefaultWriteOptions()
+			So(db.Merge(wo, []byte("notexists"), []byte("bar")), ShouldBeNil)
+
+			Convey("Then the new value should be 'bar'", func() {
+				value, err := db.Get(NewDefaultReadOptions(), []byte("notexists"))
+				So(err, ShouldBeNil)
+				So(value.Data(), ShouldResemble, []byte("bar"))
+				value.Free()
+			})
+		})
+	})
+}
