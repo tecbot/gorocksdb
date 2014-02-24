@@ -50,7 +50,7 @@ func (self *Options) SetComparator(value *Comparator) {
 // The merge operator will called if Merge operations are used.
 // Default: nil
 func (self *Options) SetMergeOperator(value *MergeOperator) {
-	C.rocksdb_options_set_merger_operator(self.c, value.c)
+	C.rocksdb_options_set_merge_operator(self.c, value.c)
 }
 
 // A single CompactionFilter instance to call into during compaction.
