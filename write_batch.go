@@ -3,8 +3,11 @@ package gorocksdb
 // #include "rocksdb/c.h"
 import "C"
 
+import (
+	"io"
+)
+
 // WriteBatch is a batching of Puts, Merges and Deletes.
-// TODO: WriteBatchIterator
 type WriteBatch struct {
 	c *C.rocksdb_writebatch_t
 }
@@ -42,6 +45,28 @@ func (self *WriteBatch) Delete(key []byte) {
 	C.rocksdb_writebatch_delete(self.c, cKey, C.size_t(len(key)))
 }
 
+// Data returns the serialized version of this batch.
+func (self *WriteBatch) Data() []byte {
+	var cSize C.size_t
+	cValue := C.rocksdb_writebatch_data(self.c, &cSize)
+
+	return CharToByte(cValue, cSize)
+}
+
+// Count returns the number of updates in the batch.
+func (self *WriteBatch) Count() int {
+	return int(C.rocksdb_writebatch_count(self.c))
+}
+
+func (self *WriteBatch) NewIterator() *WriteBatchIterator {
+	data := self.Data()
+	if len(data) < 8+4 {
+		return &WriteBatchIterator{}
+	}
+
+	return &WriteBatchIterator{data: data[12:]}
+}
+
 // Clear removes all the enqueued Put and Deletes.
 func (self *WriteBatch) Clear() {
 	C.rocksdb_writebatch_clear(self.c)
@@ -51,4 +76,86 @@ func (self *WriteBatch) Clear() {
 func (self *WriteBatch) Destroy() {
 	C.rocksdb_writebatch_destroy(self.c)
 	self.c = nil
+}
+
+type WriteBatchRecordType byte
+
+const (
+	WriteBatchRecordTypeDeletion WriteBatchRecordType = 0x0
+	WriteBatchRecordTypeValue    WriteBatchRecordType = 0x1
+	WriteBatchRecordTypeMerge    WriteBatchRecordType = 0x2
+	WriteBatchRecordTypeLogData  WriteBatchRecordType = 0x3
+)
+
+type WriteBatchRecord struct {
+	Key   []byte
+	Value []byte
+	Type  WriteBatchRecordType
+}
+
+type WriteBatchIterator struct {
+	data   []byte
+	record WriteBatchRecord
+	err    error
+}
+
+func (self *WriteBatchIterator) Next() bool {
+	if self.err != nil || len(self.data) == 0 {
+		return false
+	}
+
+	self.record.Key = nil
+	self.record.Value = nil
+
+	recordType := WriteBatchRecordType(self.data[0])
+	self.record.Type = recordType
+	self.data = self.data[1:]
+
+	x, n := self.decodeVarint(self.data)
+	if n == 0 {
+		self.err = io.ErrShortBuffer
+		return false
+	}
+	k := n + int(x)
+	self.record.Key = self.data[n:k]
+	self.data = self.data[k:]
+
+	if recordType == WriteBatchRecordTypeValue || recordType == WriteBatchRecordTypeMerge {
+		x, n := self.decodeVarint(self.data)
+		if n == 0 {
+			self.err = io.ErrShortBuffer
+			return false
+		}
+		k := n + int(x)
+		self.record.Value = self.data[n:k]
+		self.data = self.data[k:]
+	}
+
+	return true
+}
+
+func (self *WriteBatchIterator) Record() *WriteBatchRecord {
+	return &self.record
+}
+
+func (self *WriteBatchIterator) Error() error {
+	return self.err
+}
+
+func (self *WriteBatchIterator) decodeVarint(buf []byte) (x uint64, n int) {
+	// x, n already 0
+	for shift := uint(0); shift < 64; shift += 7 {
+		if n >= len(buf) {
+			return 0, 0
+		}
+		b := uint64(buf[n])
+		n++
+		x |= (b & 0x7F) << shift
+		if (b & 0x80) == 0 {
+			return x, n
+		}
+	}
+
+	// The number is too large to represent in a 64-bit value.
+	return 0, 0
 }
