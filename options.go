@@ -84,6 +84,13 @@ func (self *Options) SetMergeOperator(value *MergeOperator) {
 // std::shared_ptr<CompactionFilterFactory> compaction_filter_factory;
 // TODO: implement in C and Go
 
+// Version TWO of the compaction_filter_factory
+// It supports rolling compaction
+//
+// Default: a factory that doesn't provide any object
+// std::shared_ptr<CompactionFilterFactoryV2> compaction_filter_factory_v2;
+// TODO: implement in C and Go
+
 // If true, the database will be created if it is missing.
 // Default: false
 func (self *Options) SetCreateIfMissing(value bool) {
@@ -124,6 +131,17 @@ func (self *Options) SetEnv(value *Env) {
 //func (self *Options) SetInfoLog(value *Logger) {
 //	C.rocksdb_options_set_info_log(self.c, value.logger)
 //}
+
+//enum InfoLogLevel : unsigned char {
+//	DEBUG = 0,
+//	INFO,
+//	WARN,
+//	ERROR,
+// 	FATAL,
+//	NUM_INFO_LOG_LEVELS,
+//};
+// InfoLogLevel info_log_level;
+// TODO: implement in C and Go
 
 // -------------------
 // Parameters that affect performance
@@ -220,8 +238,7 @@ func (self *Options) SetCompression(value CompressionType) {
 // be slower. This array should have an entry for
 // each level of the database. This array overrides the
 // value specified in the previous field 'compression'.
-// Default: nil
-// TODO: implement in GO
+// TODO: implement in C
 //func (self *Options) SetCompressionPerLevel(value []CompressionType) {
 //	C.rocksdb_options_set_compression_per_level(self.c, C.int(value))
 //}
@@ -676,6 +693,12 @@ func (self *Options) SetUniversalCompactionOptions(value *UniversalCompactionOpt
 	C.rocksdb_options_set_universal_compaction_options(self.c, value.c)
 }
 
+// If true, compaction will verify checksum on every read that happens
+// as part of compaction
+// Default: true
+// verify_checksums_in_compaction
+// TODO: implement in C and GO
+
 // Use KeyMayExist API to filter deletes when this is true.
 // If KeyMayExist returns false, i.e. the key definitely does not exist, then
 // the delete is a noop. KeyMayExist only incurs in-memory look up.
@@ -756,6 +779,21 @@ func (self *Options) SetMemtablePrefixBloomProbes(value uint32) {
 func (self *Options) SetMaxSuccessiveMerges(value int) {
 	C.rocksdb_options_set_max_successive_merges(self.c, C.size_t(value))
 }
+
+// The number of partial merge operands to accumulate before partial
+// merge will be performed. Partial merge will not be called
+// if the list of values to merge is less than min_partial_merge_operands.
+//
+// If min_partial_merge_operands < 2, then it will be treated as 2.
+//
+// Default: 2
+//uint32_t min_partial_merge_operands;
+// TODO: implement in C and Go
+
+// Allow RocksDB to use thread local storage to optimize performance.
+// Default: true
+//bool allow_thread_local;
+// TODO: implement in C and Go
 
 // If enabled, then we should collect metrics about database operations.
 // Default: false
