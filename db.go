@@ -17,6 +17,15 @@ type Range struct {
 	Limit []byte
 }
 
+// Metadata associated with each SST file.
+type LiveFileMetadata struct {
+	Name        string
+	Level       int
+	Size        int64
+	SmallestKey []byte
+	LargestKey  []byte
+}
+
 // DB is a reusable handle to a RocksDB database on disk, created by Open.
 type DB struct {
 	c    *C.rocksdb_t
@@ -172,6 +181,32 @@ func (self *DB) GetApproximateSizes(ranges []Range) []uint64 {
 	return sizes
 }
 
+// GetLiveFilesMetaData returns a list of all table files with their
+// level, start key and end key.
+func (self *DB) GetLiveFilesMetaData() []LiveFileMetadata {
+	lf := C.rocksdb_livefiles(self.c)
+	defer C.rocksdb_livefiles_destroy(lf)
+
+	count := C.rocksdb_livefiles_count(lf)
+	liveFiles := make([]LiveFileMetadata, int(count))
+	for i := C.int(0); i < count; i++ {
+		var liveFile LiveFileMetadata
+		liveFile.Name = C.GoString(C.rocksdb_livefiles_name(lf, i))
+		liveFile.Level = int(C.rocksdb_livefiles_level(lf, i))
+		liveFile.Size = int64(C.rocksdb_livefiles_size(lf, i))
+
+		var cSize C.size_t
+		key := C.rocksdb_livefiles_smallestkey(lf, i, &cSize)
+		liveFile.SmallestKey = C.GoBytes(unsafe.Pointer(key), C.int(cSize))
+
+		key = C.rocksdb_livefiles_largestkey(lf, i, &cSize)
+		liveFile.LargestKey = C.GoBytes(unsafe.Pointer(key), C.int(cSize))
+		liveFiles[int(i)] = liveFile
+	}
+
+	return liveFiles
+}
+
 // CompactRange runs a manual compaction on the Range of keys given. This is
 // not likely to be needed for typical usage.
 func (self *DB) CompactRange(r Range) {
@@ -218,6 +253,13 @@ func (self *DB) EnableFileDeletions(force bool) error {
 	}
 
 	return nil
+}
+
+// Delete the file name from the db directory and update the internal state to
+// reflect that. Supports deletion of sst and log files only. 'name' must be
+// path relative to the db directory. eg. 000001.sst, /archive/000003.log.
+func (self *DB) DeleteFile(name string) {
+	C.rocksdb_delete_file(self.c, StringToChar(name))
 }
 
 // Close closes the database.
