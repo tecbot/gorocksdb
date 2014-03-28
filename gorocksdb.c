@@ -36,7 +36,7 @@ rocksdb_mergeoperator_t* gorocksdb_mergeoperator_create(size_t id) {
         (void*)id,
         gorocksdb_destruct_handler,
         (char* (*)(void*, const char*, size_t, const char*, size_t, const char* const*, const size_t*, int, unsigned char*, size_t*))(gorocksdb_mergeoperator_full_merge),
-        (char* (*)(void*, const char*, size_t, const char*, size_t, const char*, size_t, unsigned char*, size_t*))(gorocksdb_mergeoperator_partial_merge),
+        (char* (*)(void*, const char*, size_t, const char* const*, const size_t*, int, unsigned char*, size_t*))(gorocksdb_mergeoperator_partial_merge_multi),
         gorocksdb_mergeoperator_delete_value,
         (const char* (*)(void*))(gorocksdb_mergeoperator_name));
 }
