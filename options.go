@@ -226,6 +226,11 @@ func (self *Options) SetCompression(value CompressionType) {
 //	C.rocksdb_options_set_compression_per_level(self.c, C.int(value))
 //}
 
+// Sets the start level to use compression.
+func (self *Options) SetMinLevelToCompress(level int) {
+	C.rocksdb_options_set_min_level_to_compress(self.c, C.int(level))
+}
+
 // Sets different options for compression algorithms.
 // Default: nil
 func (self *Options) SetCompressionOptions(value *CompressionOptions) {
