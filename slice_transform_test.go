@@ -1,7 +1,6 @@
 package gorocksdb
 
 import (
-	"fmt"
 	. "github.com/smartystreets/goconvey/convey"
 	"os"
 	"testing"
@@ -12,18 +11,15 @@ type testSliceTransformHandler struct {
 }
 
 func (self *testSliceTransformHandler) Transform(src []byte) []byte {
-	fmt.Println("Transform", string(src))
-	return src
+	return src[0:3]
 }
 
 func (self *testSliceTransformHandler) InDomain(src []byte) bool {
-	fmt.Println("InDomain", string(src))
-	return true
+	return len(src) >= 3
 }
 
 func (self *testSliceTransformHandler) InRange(src []byte) bool {
-	fmt.Println(src)
-	return true
+	return len(src) == 3
 }
 
 func (self *testSliceTransformHandler) Name() string {
@@ -31,74 +27,85 @@ func (self *testSliceTransformHandler) Name() string {
 	return "gorocksdb.test"
 }
 
-func TestNewSliceTransform(t *testing.T) {
+func TestCustomSliceTransform(t *testing.T) {
 	dbName := os.TempDir() + "/TestNewSliceTransform"
 
-	Convey("Subject: Custom slice transform", t, func() {
-		Convey("When create a custom slice transform it should not panic", func() {
-			handler := &testSliceTransformHandler{}
-			sliceTransform := NewSliceTransform(handler)
+	Convey("Subject: Prefix filtering with custom slice transform", t, func() {
+		handler := &testSliceTransformHandler{}
+		sliceTransform := NewSliceTransform(handler)
 
-			Convey("When passed to the db as prefix extractor it should not panic", func() {
-				options := NewDefaultOptions()
-				DestroyDb(dbName, options)
-				options.SetCreateIfMissing(true)
-				options.SetPrefixExtractor(sliceTransform)
-				options.SetWholeKeyFiltering(true)
+		options := NewDefaultOptions()
+		DestroyDb(dbName, options)
 
-				_, err := OpenDb(options, dbName)
-				So(err, ShouldBeNil)
-				So(handler.initiated, ShouldBeTrue)
-			})
-		})
+		options.SetFilterPolicy(NewBloomFilter(10))
+		options.SetPrefixExtractor(sliceTransform)
+		options.SetHashSkipListRep(50000, 4, 4)
+		options.SetCreateIfMissing(true)
+
+		db, err := OpenDb(options, dbName)
+		defer db.Close()
+
+		So(err, ShouldBeNil)
+
+		wo := NewDefaultWriteOptions()
+		So(db.Put(wo, []byte("foo1"), []byte("foo")), ShouldBeNil)
+		So(db.Put(wo, []byte("foo2"), []byte("foo")), ShouldBeNil)
+		So(db.Put(wo, []byte("foo3"), []byte("foo")), ShouldBeNil)
+		So(db.Put(wo, []byte("bar1"), []byte("bar")), ShouldBeNil)
+		So(db.Put(wo, []byte("bar2"), []byte("bar")), ShouldBeNil)
+		So(db.Put(wo, []byte("bar3"), []byte("bar")), ShouldBeNil)
+
+		ro := NewDefaultReadOptions()
+		ro.SetPrefixSeek(true)
+
+		it := db.NewIterator(ro)
+		defer it.Close()
+		numFound := 0
+		for it.Seek([]byte("bar")); it.Valid(); it.Next() {
+			numFound++
+		}
+
+		So(it.Err(), ShouldBeNil)
+		So(numFound, ShouldEqual, 3)
 	})
 }
 
-func TestNewFixedPrefixTransform(t *testing.T) {
+func TestFixedPrefixTransform(t *testing.T) {
 	dbName := os.TempDir() + "/TestNewFixedPrefixTransform"
 
-	Convey("Subject: Create fixed prefix transform", t, func() {
-		Convey("When create a fixed prefix transform then it should not panic", func() {
-			sliceTransform := NewFixedPrefixTransform(3)
+	Convey("Subject: Prefix filtering with native fixed prefix transform", t, func() {
+		options := NewDefaultOptions()
+		DestroyDb(dbName, options)
 
-			Convey("When passed to the db as prefix extractor then it should not panic", func() {
-				options := NewDefaultOptions()
-				DestroyDb(dbName, options)
-				options.SetCreateIfMissing(true)
-				options.SetPrefixExtractor(sliceTransform)
-				options.SetWholeKeyFiltering(true)
-				options.SetFilterPolicy(NewBloomFilter(8))
+		options.SetFilterPolicy(NewBloomFilter(10))
+		options.SetPrefixExtractor(NewFixedPrefixTransform(3))
+		options.SetHashSkipListRep(50000, 4, 4)
+		options.SetCreateIfMissing(true)
 
-				db, err := OpenDb(options, dbName)
-				So(err, ShouldBeNil)
+		db, err := OpenDb(options, dbName)
+		defer db.Close()
 
-				Convey("When add 3 values with key prefix 'foo' and 3 values with key prefix 'bar' then it should not panic", func() {
-					wo := NewDefaultWriteOptions()
-					So(db.Put(wo, []byte("foo1"), []byte("foo")), ShouldBeNil)
-					So(db.Put(wo, []byte("foo2"), []byte("foo")), ShouldBeNil)
-					So(db.Put(wo, []byte("foo3"), []byte("foo")), ShouldBeNil)
-					So(db.Put(wo, []byte("bar1"), []byte("bar")), ShouldBeNil)
-					So(db.Put(wo, []byte("bar2"), []byte("bar")), ShouldBeNil)
-					So(db.Put(wo, []byte("bar3"), []byte("bar")), ShouldBeNil)
+		So(err, ShouldBeNil)
 
-					Convey("When create an interator and seek to prefix 'bar' then it should return only 3 keys", func() {
-						ro := NewDefaultReadOptions()
-						ro.SetPrefixSeek(true)
-						ro.SetPrefix([]byte("bar"))
+		wo := NewDefaultWriteOptions()
+		So(db.Put(wo, []byte("foo1"), []byte("foo")), ShouldBeNil)
+		So(db.Put(wo, []byte("foo2"), []byte("foo")), ShouldBeNil)
+		So(db.Put(wo, []byte("foo3"), []byte("foo")), ShouldBeNil)
+		So(db.Put(wo, []byte("bar1"), []byte("bar")), ShouldBeNil)
+		So(db.Put(wo, []byte("bar2"), []byte("bar")), ShouldBeNil)
+		So(db.Put(wo, []byte("bar3"), []byte("bar")), ShouldBeNil)
 
-						it := db.NewIterator(ro)
-						it.Seek([]byte("bar"))
-						numFound := 0
-						for ; it.Valid(); it.Next() {
-							numFound++
+		ro := NewDefaultReadOptions()
+		ro.SetPrefixSeek(true)
 
-						}
-						So(it.Err(), ShouldBeNil)
-						So(numFound, ShouldEqual, 3)
-						it.Close()
-					})
-				})
-			})
-		})
+		it := db.NewIterator(ro)
+		defer it.Close()
+		numFound := 0
+		for it.Seek([]byte("bar")); it.Valid(); it.Next() {
+			numFound++
+		}
+
+		So(it.Err(), ShouldBeNil)
+		So(numFound, ShouldEqual, 3)
 	})
 }
