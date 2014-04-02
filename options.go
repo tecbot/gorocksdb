@@ -810,11 +810,35 @@ func (self *Options) PrepareForBulkLoad() {
 	C.rocksdb_options_prepare_for_bulk_load(self.c)
 }
 
-// SetMemtableVectorRep causes MemTableReps.
-// This is useful for workloads where iteration is very rare and writes
-// are generally not issued after reads begin.
+// SetMemtableVectorRep sets a MemTableRep which is backed by a vector.
+//
+// On iteration, the vector is sorted. This is useful for workloads where
+// iteration is very rare and writes are generally not issued after reads begin.
 func (self *Options) SetMemtableVectorRep() {
 	C.rocksdb_options_set_memtable_vector_rep(self.c)
+}
+
+// SetHashSkipListRep sets a hash skip list as MemTableRep.
+//
+// It contains a fixed array of buckets, each
+// pointing to a skiplist (null if the bucket is empty).
+//
+// bucketCount:             number of fixed array buckets
+// skiplistHeight:          the max height of the skiplist
+// skiplistBranchingFactor: probabilistic size ratio between adjacent
+//                          link lists in the skiplist
+func (self *Options) SetHashSkipListRep(bucketCount int, skiplistHeight, skiplistBranchingFactor int32) {
+	C.rocksdb_options_set_hash_skip_list_rep(self.c, C.size_t(bucketCount), C.int32_t(skiplistHeight), C.int32_t(skiplistBranchingFactor))
+}
+
+// SetHashLinkListRep sets a hashed linked list as MemTableRep.
+//
+// It contains a fixed array of buckets, each pointing to a sorted single
+// linked list (null if the bucket is empty).
+//
+// bucketCount: number of fixed array buckets
+func (self *Options) SetHashLinkListRep(bucketCount int) {
+	C.rocksdb_options_set_hash_link_list_rep(self.c, C.size_t(bucketCount))
 }
 
 // Destroy deallocates the Options object.
