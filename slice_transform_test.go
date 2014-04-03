@@ -40,6 +40,7 @@ func TestCustomSliceTransform(t *testing.T) {
 		options.SetFilterPolicy(NewBloomFilter(10))
 		options.SetPrefixExtractor(sliceTransform)
 		options.SetHashSkipListRep(50000, 4, 4)
+		options.SetPlainTableFactory(4, 10, 0.75, 16)
 		options.SetCreateIfMissing(true)
 
 		db, err := OpenDb(options, dbName)
@@ -80,6 +81,7 @@ func TestFixedPrefixTransform(t *testing.T) {
 		options.SetFilterPolicy(NewBloomFilter(10))
 		options.SetPrefixExtractor(NewFixedPrefixTransform(3))
 		options.SetHashSkipListRep(50000, 4, 4)
+		options.SetPlainTableFactory(4, 10, 0.75, 16)
 		options.SetCreateIfMissing(true)
 
 		db, err := OpenDb(options, dbName)

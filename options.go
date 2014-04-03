@@ -717,17 +717,6 @@ func (self *Options) SetMaxSequentialSkipInIterations(value uint64) {
 	C.rocksdb_options_set_max_sequential_skip_in_iterations(self.c, C.uint64_t(value))
 }
 
-//  // This is a factory that provides MemTableRep objects.
-//  // Default: a factory that provides a skip-list-based implementation of
-//  // MemTableRep.
-//  std::shared_ptr<MemTableRepFactory> memtable_factory;
-// TODO: implement in C and Go
-//
-//  // This is a factory that provides TableFactory objects.
-//  // Default: a factory that provides a default implementation of
-//  // Table and TableBuilder.
-//  std::shared_ptr<TableFactory> table_factory;
-// TODO: implement in C and Go
 //
 //  // This option allows user to to collect their own interested statistics of
 //  // the tables.
@@ -839,6 +828,26 @@ func (self *Options) SetHashSkipListRep(bucketCount int, skiplistHeight, skiplis
 // bucketCount: number of fixed array buckets
 func (self *Options) SetHashLinkListRep(bucketCount int) {
 	C.rocksdb_options_set_hash_link_list_rep(self.c, C.size_t(bucketCount))
+}
+
+// SetPlainTableFactory sets a plain table factory with prefix-only seek.
+//
+// For this factory, you need to set prefix_extractor properly to make it
+// work. Look-up will starts with prefix hash lookup for key prefix. Inside the
+// hash bucket found, a binary search is executed for hash conflicts. Finally,
+// a linear search is used.
+//
+// keyLen: 			plain table has optimization for fix-sized keys,
+// 					which can be specified via keyLen.
+// bloomBitsPerKey: the number of bits used for bloom filer per prefix. You
+//                  may disable it by passing a zero.
+// hashTableRatio:  the desired utilization of the hash table used for prefix
+//                  hashing. hashTableRatio = number of prefixes / #buckets
+//                  in the hash table
+// indexSparseness: inside each prefix, need to build one index record for how
+//                  many keys for binary search inside each hash bucket.
+func (self *Options) SetPlainTableFactory(keyLen uint32, bloomBitsPerKey int, hashTableRatio float64, indexSparseness int) {
+	C.rocksdb_options_set_plain_table_factory(self.c, C.uint32_t(keyLen), C.int(bloomBitsPerKey), C.double(hashTableRatio), C.size_t(indexSparseness))
 }
 
 // Destroy deallocates the Options object.
