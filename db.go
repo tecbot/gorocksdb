@@ -284,7 +284,7 @@ func DestroyDb(name string, opts *Options) error {
 // RepairDb repairs a database.
 func RepairDb(name string, opts *Options) error {
 	var cErr *C.char
-	C.rocksdb_destroy_db(opts.c, StringToChar(name), &cErr)
+	C.rocksdb_repair_db(opts.c, StringToChar(name), &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 
