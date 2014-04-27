@@ -49,28 +49,12 @@ func (self *ReadOptions) SetFillCache(value bool) {
 	C.rocksdb_readoptions_set_fill_cache(self.c, BoolToChar(value))
 }
 
-// If this option is set to true and memtable implementation allows, Seek
-// might only return keys with the same prefix as the seek-key.
-// Default: false
-func (self *ReadOptions) SetPrefixSeek(value bool) {
-	C.rocksdb_readoptions_set_prefix_seek(self.c, BoolToChar(value))
-}
-
 // If snapshot is set, read as of the supplied snapshot
 // which must belong to the DB that is being read and which must
 // not have been released.
 // Default: nil
 func (self *ReadOptions) SetSnapshot(snap *Snapshot) {
 	C.rocksdb_readoptions_set_snapshot(self.c, snap.c)
-}
-
-// If prefix is set, and ReadOptions is being passed to
-// db.NewIterator, only return results when the key begins with this prefix.
-// Default: nil
-func (self *ReadOptions) SetPrefix(prefix []byte) {
-	cKey := ByteToChar(prefix)
-
-	C.rocksdb_readoptions_set_prefix(self.c, cKey, C.size_t(len(prefix)))
 }
 
 // Specify if this read request should process data that ALREADY
