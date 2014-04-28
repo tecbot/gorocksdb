@@ -1,6 +1,7 @@
 package gorocksdb
 
 import (
+	"bytes"
 	. "github.com/smartystreets/goconvey/convey"
 	"os"
 	"testing"
@@ -57,7 +58,6 @@ func TestCustomSliceTransform(t *testing.T) {
 		So(db.Put(wo, []byte("bar3"), []byte("bar")), ShouldBeNil)
 
 		ro := NewDefaultReadOptions()
-		ro.SetPrefixSeek(true)
 
 		it := db.NewIterator(ro)
 		defer it.Close()
@@ -74,12 +74,11 @@ func TestCustomSliceTransform(t *testing.T) {
 func TestFixedPrefixTransform(t *testing.T) {
 	dbName := os.TempDir() + "/TestNewFixedPrefixTransform"
 
-	Convey("Subject: Prefix filtering with native fixed prefix transform", t, func() {
+	Convey("Subject: Prefix filtering with end condition checking", t, func() {
 		options := NewDefaultOptions()
 		DestroyDb(dbName, options)
 
 		options.SetFilterPolicy(NewBloomFilter(10))
-		options.SetPrefixExtractor(NewFixedPrefixTransform(3))
 		options.SetHashSkipListRep(50000, 4, 4)
 		options.SetPlainTableFactory(4, 10, 0.75, 16)
 		options.SetCreateIfMissing(true)
@@ -98,12 +97,14 @@ func TestFixedPrefixTransform(t *testing.T) {
 		So(db.Put(wo, []byte("bar3"), []byte("bar")), ShouldBeNil)
 
 		ro := NewDefaultReadOptions()
-		ro.SetPrefixSeek(true)
 
 		it := db.NewIterator(ro)
 		defer it.Close()
 		numFound := 0
-		for it.Seek([]byte("bar")); it.Valid(); it.Next() {
+		prefix := []byte("bar")
+		// Iterators must now be checked for passing the end condition
+		// See https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes
+		for it.Seek(prefix); it.Valid() && bytes.HasPrefix(it.Value().Data(), prefix); it.Next() {
 			numFound++
 		}
 
