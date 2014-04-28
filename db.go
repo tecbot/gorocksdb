@@ -50,6 +50,23 @@ func OpenDb(opts *Options, name string) (*DB, error) {
 	}, nil
 }
 
+// OpenDbForReadOnly opens a database with the specified options for readonly usage.
+func OpenDbForReadOnly(opts *Options, name string, errorIfLogFileExist bool) (*DB, error) {
+	var cErr *C.char
+	db := C.rocksdb_open_for_read_only(opts.c, StringToChar(name), BoolToChar(errorIfLogFileExist), &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+
+		return nil, errors.New(C.GoString(cErr))
+	}
+
+	return &DB{
+		name: name,
+		c:    db,
+		opts: opts,
+	}, nil
+}
+
 // Name returns the name of the database.
 func (self *DB) Name() string {
 	return self.name
