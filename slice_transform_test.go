@@ -1,7 +1,6 @@
 package gorocksdb
 
 import (
-	"bytes"
 	. "github.com/smartystreets/goconvey/convey"
 	"os"
 	"testing"
@@ -104,7 +103,7 @@ func TestFixedPrefixTransform(t *testing.T) {
 		prefix := []byte("bar")
 		// Iterators must now be checked for passing the end condition
 		// See https://github.com/facebook/rocksdb/wiki/Prefix-Seek-API-Changes
-		for it.Seek(prefix); it.Valid() && bytes.HasPrefix(it.Value().Data(), prefix); it.Next() {
+		for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
 			numFound++
 		}
 

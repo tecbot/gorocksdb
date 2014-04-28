@@ -5,6 +5,7 @@ package gorocksdb
 import "C"
 
 import (
+	"bytes"
 	"errors"
 	"unsafe"
 )
@@ -39,6 +40,12 @@ func NewNativeIterator(c *C.rocksdb_iterator_t) *Iterator {
 // first or the last key in the database.
 func (self *Iterator) Valid() bool {
 	return CharToBool(C.rocksdb_iter_valid(self.c))
+}
+
+// ValidForPrefix returns false only when an Iterator has iterated past the
+// first or the last key in the database or the specified prefix.
+func (self *Iterator) ValidForPrefix(prefix []byte) bool {
+	return CharToBool(C.rocksdb_iter_valid(self.c)) && bytes.HasPrefix(self.Value().Data(), prefix)
 }
 
 // Key returns the key the iterator currently holds.
