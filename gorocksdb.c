@@ -3,13 +3,13 @@
 
 /* Base */
 
-void gorocksdb_destruct_handler(void* id) { }
+void gorocksdb_destruct_handler(void* state) { }
 
 /* Comparator */
 
-rocksdb_comparator_t* gorocksdb_comparator_create(size_t id) {
+rocksdb_comparator_t* gorocksdb_comparator_create(void* state) {
     return rocksdb_comparator_create(
-        (void*)id,
+        state,
         gorocksdb_destruct_handler,
         (int (*)(void*, const char*, size_t, const char*, size_t))(gorocksdb_comparator_compare),
         (const char *(*)(void*))(gorocksdb_comparator_name));
@@ -17,9 +17,9 @@ rocksdb_comparator_t* gorocksdb_comparator_create(size_t id) {
 
 /* Filter Policy */
 
-rocksdb_filterpolicy_t* gorocksdb_filterpolicy_create(size_t id) {
+rocksdb_filterpolicy_t* gorocksdb_filterpolicy_create(void* state) {
     return rocksdb_filterpolicy_create(
-        (void*)id,
+        state,
         gorocksdb_destruct_handler,
         (char* (*)(void*, const char* const*, const size_t*, int, size_t*))(gorocksdb_filterpolicy_create_filter),
         (unsigned char (*)(void*, const char*, size_t, const char*, size_t))(gorocksdb_filterpolicy_key_may_match),
@@ -27,13 +27,13 @@ rocksdb_filterpolicy_t* gorocksdb_filterpolicy_create(size_t id) {
         (const char *(*)(void*))(gorocksdb_filterpolicy_name));
 }
 
-void gorocksdb_filterpolicy_delete_filter(void* id, const char* v, size_t s) { }
+void gorocksdb_filterpolicy_delete_filter(void* state, const char* v, size_t s) { }
 
 /* Merge Operator */
 
-rocksdb_mergeoperator_t* gorocksdb_mergeoperator_create(size_t id) {
+rocksdb_mergeoperator_t* gorocksdb_mergeoperator_create(void* state) {
     return rocksdb_mergeoperator_create(
-        (void*)id,
+        state,
         gorocksdb_destruct_handler,
         (char* (*)(void*, const char*, size_t, const char*, size_t, const char* const*, const size_t*, int, unsigned char*, size_t*))(gorocksdb_mergeoperator_full_merge),
         (char* (*)(void*, const char*, size_t, const char* const*, const size_t*, int, unsigned char*, size_t*))(gorocksdb_mergeoperator_partial_merge_multi),
@@ -45,9 +45,9 @@ void gorocksdb_mergeoperator_delete_value(void* id, const char* v, size_t s) { }
 
 /* Slice Transform */
 
-rocksdb_slicetransform_t* gorocksdb_slicetransform_create(size_t id) {
+rocksdb_slicetransform_t* gorocksdb_slicetransform_create(void* state) {
     return rocksdb_slicetransform_create(
-    	(void*)id,
+    	state,
     	gorocksdb_destruct_handler,
     	(char* (*)(void*, const char*, size_t, size_t*))(gorocksdb_slicetransform_transform),
     	(unsigned char (*)(void*, const char*, size_t))(gorocksdb_slicetransform_in_domain),
