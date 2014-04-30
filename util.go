@@ -23,14 +23,6 @@ func BoolToChar(b bool) C.uchar {
 	return 0
 }
 
-// CharToBool converts a C.uchar value to bool
-func CharToBool(c C.uchar) bool {
-	if c == 0 {
-		return false
-	}
-	return true
-}
-
 func CharToByte(data *C.char, len C.size_t) []byte {
 	var value []byte
 
