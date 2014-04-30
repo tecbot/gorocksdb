@@ -1,9 +1,6 @@
-# gorocksdb
+# gorocksdb, a Go wrapper for RocksDB
 
-gorocksdb is a Go wrapper for RocksDB.
-
-The API has been godoc'ed and [is available on the
-web](http://godoc.org/github.com/tecbot/gorocksdb).
+[![Build Status](https://travis-ci.org/tecbot/gorocksdb.png)](https://travis-ci.org/tecbot/gorocksdb) [![GoDoc](https://godoc.org/github.com/tecbot/gorocksdb?status.png)](http://godoc.org/github.com/tecbot/gorocksdb)
 
 ## Building
 
