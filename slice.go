@@ -17,7 +17,7 @@ func NewSlice(data *C.char, size C.size_t) *Slice {
 }
 
 func (self *Slice) Data() []byte {
-	return CharToByte(self.data, self.size)
+	return charToByte(self.data, self.size)
 }
 
 func (self *Slice) Size() int {

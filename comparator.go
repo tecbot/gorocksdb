@@ -46,8 +46,8 @@ func (self *Comparator) Destroy() {
 
 //export gorocksdb_comparator_compare
 func gorocksdb_comparator_compare(id int, cKeyA *C.char, cKeyALen C.size_t, cKeyB *C.char, cKeyBLen C.size_t) C.int {
-	keyA := CharToByte(cKeyA, cKeyALen)
-	keyB := CharToByte(cKeyB, cKeyBLen)
+	keyA := charToByte(cKeyA, cKeyALen)
+	keyB := charToByte(cKeyB, cKeyBLen)
 
 	handler := cmpHandlers[id]
 	compare := handler.Compare(keyA, keyB)
@@ -59,5 +59,5 @@ func gorocksdb_comparator_compare(id int, cKeyA *C.char, cKeyALen C.size_t, cKey
 func gorocksdb_comparator_name(id int) *C.char {
 	handler := cmpHandlers[id]
 
-	return StringToChar(handler.Name())
+	return stringToChar(handler.Name())
 }

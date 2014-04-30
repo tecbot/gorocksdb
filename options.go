@@ -113,13 +113,13 @@ func (self *Options) SetMergeOperator(value *MergeOperator) {
 // If true, the database will be created if it is missing.
 // Default: false
 func (self *Options) SetCreateIfMissing(value bool) {
-	C.rocksdb_options_set_create_if_missing(self.c, BoolToChar(value))
+	C.rocksdb_options_set_create_if_missing(self.c, boolToChar(value))
 }
 
 // If true, an error is raised if the database already exists.
 // Default: false
 func (self *Options) SetErrorIfExists(value bool) {
-	C.rocksdb_options_set_error_if_exists(self.c, BoolToChar(value))
+	C.rocksdb_options_set_error_if_exists(self.c, boolToChar(value))
 }
 
 // If true, the implementation will do aggressive checking of the
@@ -132,7 +132,7 @@ func (self *Options) SetErrorIfExists(value bool) {
 // Write operations.
 // Default: false
 func (self *Options) SetParanoidChecks(value bool) {
-	C.rocksdb_options_set_paranoid_checks(self.c, BoolToChar(value))
+	C.rocksdb_options_set_paranoid_checks(self.c, boolToChar(value))
 }
 
 // Use the specified object to interact with the environment,
@@ -285,7 +285,7 @@ func (self *Options) SetPrefixExtractor(value *SliceTransform) {
 // This must generally be true for gets to be efficient.
 // Default: true
 func (self *Options) SetWholeKeyFiltering(value bool) {
-	C.rocksdb_options_set_whole_key_filtering(self.c, BoolToChar(value))
+	C.rocksdb_options_set_whole_key_filtering(self.c, boolToChar(value))
 }
 
 // Number of levels for this database.
@@ -410,7 +410,7 @@ func (self *Options) SetMaxGrandparentOverlapFactor(value int) {
 // sync to the OS to flush all dirty buffers to stable storage.
 // Default: false
 func (self *Options) SetDisableDataSync(value bool) {
-	C.rocksdb_options_set_disable_data_sync(self.c, C.int(Btoi(value)))
+	C.rocksdb_options_set_disable_data_sync(self.c, C.int(btoi(value)))
 }
 
 // If true, then every store to stable storage will issue a fsync.
@@ -419,7 +419,7 @@ func (self *Options) SetDisableDataSync(value bool) {
 // filesystem like ext3 that can lose files after a reboot.
 // Default: false
 func (self *Options) SetUseFsync(value bool) {
-	C.rocksdb_options_set_use_fsync(self.c, C.int(Btoi(value)))
+	C.rocksdb_options_set_use_fsync(self.c, C.int(btoi(value)))
 }
 
 // This number controls how often a new scribe log about
@@ -436,7 +436,7 @@ func (self *Options) SetDbStatsLogInterval(value int) {
 // name's prefix.
 // Default: empty
 func (self *Options) SetDbLogDir(value string) {
-	C.rocksdb_options_set_db_log_dir(self.c, StringToChar(value))
+	C.rocksdb_options_set_db_log_dir(self.c, stringToChar(value))
 }
 
 // This specifies the absolute dir path for write-ahead logs (WAL).
@@ -445,7 +445,7 @@ func (self *Options) SetDbLogDir(value string) {
 // When destroying the db, all log files and the dir itself is deleted.
 // Default: empty
 func (self *Options) SetWalDir(value string) {
-	C.rocksdb_options_set_wal_dir(self.c, StringToChar(value))
+	C.rocksdb_options_set_wal_dir(self.c, stringToChar(value))
 }
 
 // Disable compaction triggered by seek.
@@ -454,7 +454,7 @@ func (self *Options) SetWalDir(value string) {
 // (which is true if max_open_files is large).
 // Default: false
 func (self *Options) SetDisableSeekCompaction(value bool) {
-	C.rocksdb_options_set_disable_seek_compaction(self.c, C.int(Btoi(value)))
+	C.rocksdb_options_set_disable_seek_compaction(self.c, C.int(btoi(value)))
 }
 
 // The periodicity when obsolete files get deleted.
@@ -543,7 +543,7 @@ func (self *Options) SetMaxManifestFileSize(value uint64) {
 // should be used.
 // Default: false
 func (self *Options) SetNoBlockCache(value bool) {
-	C.rocksdb_options_set_no_block_cache(self.c, BoolToChar(value))
+	C.rocksdb_options_set_no_block_cache(self.c, boolToChar(value))
 }
 
 // Number of shards used for table cache.
@@ -575,7 +575,7 @@ func (self *Options) SetArenaBlockSize(value int) {
 // be issued on this database.
 // Default: false
 func (self *Options) SetDisableAutoCompactions(value bool) {
-	C.rocksdb_options_set_disable_auto_compactions(self.c, C.int(Btoi(value)))
+	C.rocksdb_options_set_disable_auto_compactions(self.c, C.int(btoi(value)))
 }
 
 // The following two options affect how archived logs will be deleted.
@@ -614,38 +614,38 @@ func (self *Options) SetManifestPreallocationSize(value int) {
 // Purge duplicate/deleted keys when a memtable is flushed to storage.
 // Default: true
 func (self *Options) SetPurgeRedundantKvsWhileFlush(value bool) {
-	C.rocksdb_options_set_purge_redundant_kvs_while_flush(self.c, BoolToChar(value))
+	C.rocksdb_options_set_purge_redundant_kvs_while_flush(self.c, boolToChar(value))
 }
 
 // Data being read from file storage may be buffered in the OS
 // Default: true
 func (self *Options) SetAllowOsBuffer(value bool) {
-	C.rocksdb_options_set_allow_os_buffer(self.c, BoolToChar(value))
+	C.rocksdb_options_set_allow_os_buffer(self.c, boolToChar(value))
 }
 
 // Allow the OS to mmap file for reading sst tables.
 // Default: false
 func (self *Options) SetAllowMmapReads(value bool) {
-	C.rocksdb_options_set_allow_mmap_reads(self.c, BoolToChar(value))
+	C.rocksdb_options_set_allow_mmap_reads(self.c, boolToChar(value))
 }
 
 // Allow the OS to mmap file for writing.
 // Default: true
 func (self *Options) SetAllowMmapWrites(value bool) {
-	C.rocksdb_options_set_allow_mmap_writes(self.c, BoolToChar(value))
+	C.rocksdb_options_set_allow_mmap_writes(self.c, boolToChar(value))
 }
 
 // Disable child process inherit open files.
 // Default: true
 func (self *Options) SetIsFdCloseOnExec(value bool) {
-	C.rocksdb_options_set_is_fd_close_on_exec(self.c, BoolToChar(value))
+	C.rocksdb_options_set_is_fd_close_on_exec(self.c, boolToChar(value))
 }
 
 // Skip log corruption error on recovery (If client is ok with
 // losing most recent changes)
 // Default: false
 func (self *Options) SetSkipLogErrorOnRecovery(value bool) {
-	C.rocksdb_options_set_skip_log_error_on_recovery(self.c, BoolToChar(value))
+	C.rocksdb_options_set_skip_log_error_on_recovery(self.c, boolToChar(value))
 }
 
 // If not zero, dump stats to LOG every stats_dump_period_sec
@@ -668,7 +668,7 @@ func (self *Options) SetBlockSizeDeviation(value int) {
 // access pattern is random, when a sst file is opened.
 // Default: true
 func (self *Options) SetAdviseRandomOnOpen(value bool) {
-	C.rocksdb_options_set_advise_random_on_open(self.c, BoolToChar(value))
+	C.rocksdb_options_set_advise_random_on_open(self.c, boolToChar(value))
 }
 
 // Specify the file access pattern once a compaction is started.
@@ -684,7 +684,7 @@ func (self *Options) SetAccessHintOnCompactionStart(value CompactionAccessPatter
 // wasting spin time.
 // Default: false
 func (self *Options) SetUseAdaptiveMutex(value bool) {
-	C.rocksdb_options_set_use_adaptive_mutex(self.c, BoolToChar(value))
+	C.rocksdb_options_set_use_adaptive_mutex(self.c, boolToChar(value))
 }
 
 // Allows OS to incrementally sync files to disk while they are being
@@ -711,7 +711,7 @@ func (self *Options) SetUniversalCompactionOptions(value *UniversalCompactionOpt
 // as part of compaction
 // Default: true
 func (self *Options) SetVerifyChecksumsInCompaction(value bool) {
-	C.rocksdb_options_set_verify_checksums_in_compaction(self.c, BoolToChar(value))
+	C.rocksdb_options_set_verify_checksums_in_compaction(self.c, boolToChar(value))
 }
 
 // Use KeyMayExist API to filter deletes when this is true.
@@ -720,7 +720,7 @@ func (self *Options) SetVerifyChecksumsInCompaction(value bool) {
 // This optimization avoids writing the delete to storage when appropriate.
 // Default: false
 func (self *Options) SetFilterDeletes(value bool) {
-	C.rocksdb_options_set_filter_deletes(self.c, BoolToChar(value))
+	C.rocksdb_options_set_filter_deletes(self.c, boolToChar(value))
 }
 
 // An iteration->Next() sequentially skips over keys with the same
@@ -738,7 +738,7 @@ func (self *Options) SetMaxSequentialSkipInIterations(value uint64) {
 // * old_value for that key is a put i.e. kTypeValue
 // Default: false.
 func (self *Options) SetInplaceUpdateSupport(value bool) {
-	C.rocksdb_options_set_inplace_update_support(self.c, BoolToChar(value))
+	C.rocksdb_options_set_inplace_update_support(self.c, boolToChar(value))
 }
 
 // Number of locks used for inplace update.
@@ -799,7 +799,7 @@ func (self *Options) SetMinPartialMergeOperands(value uint32) {
 // Allow RocksDB to use thread local storage to optimize performance.
 // Default: true
 func (self *Options) SetAllowThreadLocal(value bool) {
-	C.rocksdb_options_set_allow_thread_local(self.c, BoolToChar(value))
+	C.rocksdb_options_set_allow_thread_local(self.c, boolToChar(value))
 }
 
 // If enabled, then we should collect metrics about database operations.

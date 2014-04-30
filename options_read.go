@@ -38,7 +38,7 @@ func NewNativeReadOptions(c *C.rocksdb_readoptions_t) *ReadOptions {
 // verified against corresponding checksums.
 // Default: false
 func (self *ReadOptions) SetVerifyChecksums(value bool) {
-	C.rocksdb_readoptions_set_verify_checksums(self.c, BoolToChar(value))
+	C.rocksdb_readoptions_set_verify_checksums(self.c, boolToChar(value))
 }
 
 // Should the "data block"/"index block"/"filter block" read for this
@@ -46,7 +46,7 @@ func (self *ReadOptions) SetVerifyChecksums(value bool) {
 // Callers may wish to set this field to false for bulk scans.
 // Default: true
 func (self *ReadOptions) SetFillCache(value bool) {
-	C.rocksdb_readoptions_set_fill_cache(self.c, BoolToChar(value))
+	C.rocksdb_readoptions_set_fill_cache(self.c, boolToChar(value))
 }
 
 // If snapshot is set, read as of the supplied snapshot
@@ -71,7 +71,7 @@ func (self *ReadOptions) SetReadTier(value ReadTier) {
 // that were inserted into the database after the creation of the iterator.
 // Default: false
 func (self *ReadOptions) SetTailing(value bool) {
-	C.rocksdb_readoptions_set_tailing(self.c, BoolToChar(value))
+	C.rocksdb_readoptions_set_tailing(self.c, boolToChar(value))
 }
 
 // Destroy deallocates the ReadOptions object.

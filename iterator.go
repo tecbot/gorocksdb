@@ -92,7 +92,7 @@ func (self *Iterator) SeekToLast() {
 
 // Seek moves the iterator to the position greater than or equal to the key.
 func (self *Iterator) Seek(key []byte) {
-	cKey := ByteToChar(key)
+	cKey := byteToChar(key)
 
 	C.rocksdb_iter_seek(self.c, cKey, C.size_t(len(key)))
 }

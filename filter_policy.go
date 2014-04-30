@@ -71,7 +71,7 @@ func gorocksdb_filterpolicy_create_filter(id int, cKeys **C.char, cKeysLen *C.si
 		cKey := C.gorocksdb_get_char_at_index(cKeys, C.int(i))
 		cKeyLen := C.gorocksdb_get_int_at_index(cKeysLen, C.int(i))
 
-		keys[i] = CharToByte(cKey, cKeyLen)
+		keys[i] = charToByte(cKey, cKeyLen)
 	}
 
 	handler := filterHandlers[id]
@@ -79,23 +79,23 @@ func gorocksdb_filterpolicy_create_filter(id int, cKeys **C.char, cKeysLen *C.si
 
 	*cDstLen = C.size_t(len(dst))
 
-	return ByteToChar(dst)
+	return byteToChar(dst)
 }
 
 //export gorocksdb_filterpolicy_key_may_match
 func gorocksdb_filterpolicy_key_may_match(id int, cKey *C.char, cKeyLen C.size_t, cFilter *C.char, cFilterLen C.size_t) C.uchar {
-	key := CharToByte(cKey, cKeyLen)
-	filter := CharToByte(cFilter, cFilterLen)
+	key := charToByte(cKey, cKeyLen)
+	filter := charToByte(cFilter, cFilterLen)
 
 	handler := filterHandlers[id]
 	match := handler.KeyMayMatch(key, filter)
 
-	return BoolToChar(match)
+	return boolToChar(match)
 }
 
 //export gorocksdb_filterpolicy_name
 func gorocksdb_filterpolicy_name(id int) *C.char {
 	handler := filterHandlers[id]
 
-	return StringToChar(handler.Name())
+	return stringToChar(handler.Name())
 }

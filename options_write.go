@@ -24,14 +24,14 @@ func NewNativeWriteOptions(c *C.rocksdb_writeoptions_t) *WriteOptions {
 // If this flag is true, writes will be slower.
 // Default: false
 func (self *WriteOptions) SetSync(value bool) {
-	C.rocksdb_writeoptions_set_sync(self.c, BoolToChar(value))
+	C.rocksdb_writeoptions_set_sync(self.c, boolToChar(value))
 }
 
 // If true, writes will not first go to the write ahead log,
 // and the write may got lost after a crash.
 // Default: false
 func (self *WriteOptions) DisableWAL(value bool) {
-	C.rocksdb_writeoptions_disable_WAL(self.c, C.int(Btoi(value)))
+	C.rocksdb_writeoptions_disable_WAL(self.c, C.int(btoi(value)))
 }
 
 // Destroy deallocates the WriteOptions object.
