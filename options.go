@@ -45,6 +45,14 @@ const (
 // Options represent all of the available options when opening a database with Open.
 type Options struct {
 	c *C.rocksdb_options_t
+
+	// hold references for GC
+	cmp   *Comparator
+	mo    *MergeOperator
+	env   *Env
+	cache *Cache
+	fp    *FilterPolicy
+	st    *SliceTransform
 }
 
 // NewDefaultOptions creates the default Options.
@@ -54,7 +62,7 @@ func NewDefaultOptions() *Options {
 
 // NewNativeOptions creates a Options object.
 func NewNativeOptions(c *C.rocksdb_options_t) *Options {
-	return &Options{c}
+	return &Options{c: c}
 }
 
 // -------------------
@@ -63,12 +71,16 @@ func NewNativeOptions(c *C.rocksdb_options_t) *Options {
 // Comparator used to define the order of keys in the table.
 // Default: a comparator that uses lexicographic byte-wise ordering
 func (self *Options) SetComparator(value *Comparator) {
+	self.cmp = value
+
 	C.rocksdb_options_set_comparator(self.c, value.c)
 }
 
 // The merge operator will called if Merge operations are used.
 // Default: nil
 func (self *Options) SetMergeOperator(value *MergeOperator) {
+	self.mo = value
+
 	C.rocksdb_options_set_merge_operator(self.c, value.c)
 }
 
@@ -139,6 +151,8 @@ func (self *Options) SetParanoidChecks(value bool) {
 // e.g. to read/write files, schedule background work, etc.
 // Default: DefaultEnv
 func (self *Options) SetEnv(value *Env) {
+	self.env = value
+
 	C.rocksdb_options_set_env(self.c, value.c)
 }
 
@@ -200,6 +214,8 @@ func (self *Options) SetMaxOpenFiles(value int) {
 // If nil, rocksdb will automatically create and use an 8MB internal cache.
 // Default: nil
 func (self *Options) SetBlockCache(value *Cache) {
+	self.cache = value
+
 	C.rocksdb_options_set_cache(self.c, value.c)
 }
 
@@ -268,6 +284,8 @@ func (self *Options) SetCompressionOptions(value *CompressionOptions) {
 // NewBloomFilterPolicy() here.
 // Default: nil
 func (self *Options) SetFilterPolicy(value *FilterPolicy) {
+	self.fp = value
+
 	C.rocksdb_options_set_filter_policy(self.c, value.c)
 }
 
@@ -278,6 +296,8 @@ func (self *Options) SetFilterPolicy(value *FilterPolicy) {
 // db.NewIterator().
 // Default: nil
 func (self *Options) SetPrefixExtractor(value *SliceTransform) {
+	self.st = value
+
 	C.rocksdb_options_set_prefix_extractor(self.c, value.c)
 }
 
@@ -872,4 +892,10 @@ func (self *Options) SetPlainTableFactory(keyLen uint32, bloomBitsPerKey int, ha
 func (self *Options) Destroy() {
 	C.rocksdb_options_destroy(self.c)
 	self.c = nil
+	self.cmp = nil
+	self.mo = nil
+	self.env = nil
+	self.cache = nil
+	self.fp = nil
+	self.st = nil
 }
