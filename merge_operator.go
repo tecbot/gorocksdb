@@ -3,9 +3,9 @@ package gorocksdb
 // #include "rocksdb/c.h"
 // #include "gorocksdb.h"
 import "C"
-
-var moHandlers = make(map[int]MergeOperatorHandler)
-var moNextId int
+import (
+	"unsafe"
+)
 
 // The Merge Operator
 //
@@ -59,11 +59,8 @@ type MergeOperatorHandler interface {
 
 // NewMergeOperator creates a new merge operator for the given handler.
 func NewMergeOperator(handler MergeOperatorHandler) *MergeOperator {
-	moNextId++
-	id := moNextId
-	moHandlers[id] = handler
-
-	return NewNativeMergeOperator(C.gorocksdb_mergeoperator_create(C.size_t(id)))
+	h := unsafe.Pointer(&handler)
+	return NewNativeMergeOperator(C.gorocksdb_mergeoperator_create(h))
 }
 
 // NewNativeMergeOperator allocates a MergeOperator object.
@@ -78,7 +75,7 @@ func (self *MergeOperator) Destroy() {
 }
 
 //export gorocksdb_mergeoperator_full_merge
-func gorocksdb_mergeoperator_full_merge(id int, cKey *C.char, cKeyLen C.size_t, cExistingValue *C.char, cExistingValueLen C.size_t, cOperands **C.char, cOperandsLen *C.size_t, cNumOperands C.int, cSuccess *C.uchar, cNewValueLen *C.size_t) *C.char {
+func gorocksdb_mergeoperator_full_merge(handler *MergeOperatorHandler, cKey *C.char, cKeyLen C.size_t, cExistingValue *C.char, cExistingValueLen C.size_t, cOperands **C.char, cOperandsLen *C.size_t, cNumOperands C.int, cSuccess *C.uchar, cNewValueLen *C.size_t) *C.char {
 	key := CharToByte(cKey, cKeyLen)
 	existingValue := CharToByte(cExistingValue, cExistingValueLen)
 	operands := make([][]byte, int(cNumOperands))
@@ -89,8 +86,7 @@ func gorocksdb_mergeoperator_full_merge(id int, cKey *C.char, cKeyLen C.size_t, 
 		operands[i] = CharToByte(cOperand, cOperandLen)
 	}
 
-	handler := moHandlers[id]
-	newValue, success := handler.FullMerge(key, existingValue, operands)
+	newValue, success := (*handler).FullMerge(key, existingValue, operands)
 	newValueLen := len(newValue)
 
 	*cNewValueLen = C.size_t(newValueLen)
@@ -100,7 +96,7 @@ func gorocksdb_mergeoperator_full_merge(id int, cKey *C.char, cKeyLen C.size_t, 
 }
 
 //export gorocksdb_mergeoperator_partial_merge_multi
-func gorocksdb_mergeoperator_partial_merge_multi(id int, cKey *C.char, cKeyLen C.size_t, cOperands **C.char, cOperandsLen *C.size_t, cNumOperands C.int, cSuccess *C.uchar, cNewValueLen *C.size_t) *C.char {
+func gorocksdb_mergeoperator_partial_merge_multi(handler *MergeOperatorHandler, cKey *C.char, cKeyLen C.size_t, cOperands **C.char, cOperandsLen *C.size_t, cNumOperands C.int, cSuccess *C.uchar, cNewValueLen *C.size_t) *C.char {
 	key := CharToByte(cKey, cKeyLen)
 	operands := make([][]byte, int(cNumOperands))
 	for i, l := 0, int(cNumOperands); i < l; i++ {
@@ -113,10 +109,10 @@ func gorocksdb_mergeoperator_partial_merge_multi(id int, cKey *C.char, cKeyLen C
 	var newValue []byte
 	success := true
 
-	handler := moHandlers[id]
 	leftOperand := operands[0]
+	h := *handler
 	for i := 1; i < int(cNumOperands); i++ {
-		newValue, success = handler.PartialMerge(key, leftOperand, operands[i])
+		newValue, success = h.PartialMerge(key, leftOperand, operands[i])
 		if !success {
 			break
 		}
@@ -131,8 +127,6 @@ func gorocksdb_mergeoperator_partial_merge_multi(id int, cKey *C.char, cKeyLen C
 }
 
 //export gorocksdb_mergeoperator_name
-func gorocksdb_mergeoperator_name(id int) *C.char {
-	handler := moHandlers[id]
-
-	return StringToChar(handler.Name())
+func gorocksdb_mergeoperator_name(handler *MergeOperatorHandler) *C.char {
+	return StringToChar((*handler).Name())
 }

@@ -3,9 +3,9 @@ package gorocksdb
 // #include "rocksdb/c.h"
 // #include "gorocksdb.h"
 import "C"
-
-var stHandlers = make(map[int]SliceTransformHandler)
-var stNextId int
+import (
+	"unsafe"
+)
 
 // A SliceTransform can be used as a prefix extractor.
 type SliceTransform struct {
@@ -28,11 +28,8 @@ type SliceTransformHandler interface {
 
 // NewSliceTransform creates a new slice transform for the given handler.
 func NewSliceTransform(handler SliceTransformHandler) *SliceTransform {
-	stNextId++
-	id := stNextId
-	stHandlers[id] = handler
-
-	return NewNativeSliceTransform(C.gorocksdb_slicetransform_create(C.size_t(id)))
+	h := unsafe.Pointer(&handler)
+	return NewNativeSliceTransform(C.gorocksdb_slicetransform_create(h))
 }
 
 // NewFixedPrefixTransform creates a new fixed prefix transform.
@@ -52,11 +49,10 @@ func (self *SliceTransform) Destroy() {
 }
 
 //export gorocksdb_slicetransform_transform
-func gorocksdb_slicetransform_transform(id int, cKey *C.char, cKeyLen C.size_t, cDstLen *C.size_t) *C.char {
+func gorocksdb_slicetransform_transform(handler *SliceTransformHandler, cKey *C.char, cKeyLen C.size_t, cDstLen *C.size_t) *C.char {
 	key := CharToByte(cKey, cKeyLen)
 
-	handler := stHandlers[id]
-	dst := handler.Transform(key)
+	dst := (*handler).Transform(key)
 
 	*cDstLen = C.size_t(len(dst))
 
@@ -64,28 +60,24 @@ func gorocksdb_slicetransform_transform(id int, cKey *C.char, cKeyLen C.size_t, 
 }
 
 //export gorocksdb_slicetransform_in_domain
-func gorocksdb_slicetransform_in_domain(id int, cKey *C.char, cKeyLen C.size_t) C.uchar {
+func gorocksdb_slicetransform_in_domain(handler *SliceTransformHandler, cKey *C.char, cKeyLen C.size_t) C.uchar {
 	key := CharToByte(cKey, cKeyLen)
 
-	handler := stHandlers[id]
-	inDomain := handler.InDomain(key)
+	inDomain := (*handler).InDomain(key)
 
 	return BoolToChar(inDomain)
 }
 
 //export gorocksdb_slicetransform_in_range
-func gorocksdb_slicetransform_in_range(id int, cKey *C.char, cKeyLen C.size_t) C.uchar {
+func gorocksdb_slicetransform_in_range(handler *SliceTransformHandler, cKey *C.char, cKeyLen C.size_t) C.uchar {
 	key := CharToByte(cKey, cKeyLen)
 
-	handler := stHandlers[id]
-	inRange := handler.InRange(key)
+	inRange := (*handler).InRange(key)
 
 	return BoolToChar(inRange)
 }
 
 //export gorocksdb_slicetransform_name
-func gorocksdb_slicetransform_name(id int) *C.char {
-	handler := stHandlers[id]
-
-	return StringToChar(handler.Name())
+func gorocksdb_slicetransform_name(handler *SliceTransformHandler) *C.char {
+	return StringToChar((*handler).Name())
 }

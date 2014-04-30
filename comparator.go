@@ -3,9 +3,9 @@ package gorocksdb
 // #include "rocksdb/c.h"
 // #include "gorocksdb.h"
 import "C"
-
-var cmpHandlers = make(map[int]ComparatorHandler)
-var cmpNextId int
+import (
+	"unsafe"
+)
 
 // A Comparator object provides a total order across slices that are
 // used as keys in an sstable or a database.
@@ -26,11 +26,8 @@ type ComparatorHandler interface {
 
 // NewComparator creates a new comparator for the given handler.
 func NewComparator(handler ComparatorHandler) *Comparator {
-	cmpNextId++
-	id := cmpNextId
-	cmpHandlers[id] = handler
-
-	return NewNativeComparator(C.gorocksdb_comparator_create(C.size_t(id)))
+	h := unsafe.Pointer(&handler)
+	return NewNativeComparator(C.gorocksdb_comparator_create(h))
 }
 
 // NewNativeComparator allocates a Comparator object.
@@ -45,19 +42,16 @@ func (self *Comparator) Destroy() {
 }
 
 //export gorocksdb_comparator_compare
-func gorocksdb_comparator_compare(id int, cKeyA *C.char, cKeyALen C.size_t, cKeyB *C.char, cKeyBLen C.size_t) C.int {
+func gorocksdb_comparator_compare(handler *ComparatorHandler, cKeyA *C.char, cKeyALen C.size_t, cKeyB *C.char, cKeyBLen C.size_t) C.int {
 	keyA := CharToByte(cKeyA, cKeyALen)
 	keyB := CharToByte(cKeyB, cKeyBLen)
 
-	handler := cmpHandlers[id]
-	compare := handler.Compare(keyA, keyB)
+	compare := (*handler).Compare(keyA, keyB)
 
 	return C.int(compare)
 }
 
 //export gorocksdb_comparator_name
-func gorocksdb_comparator_name(id int) *C.char {
-	handler := cmpHandlers[id]
-
-	return StringToChar(handler.Name())
+func gorocksdb_comparator_name(handler *ComparatorHandler) *C.char {
+	return StringToChar((*handler).Name())
 }
