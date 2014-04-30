@@ -10,7 +10,8 @@ import (
 // A Comparator object provides a total order across slices that are
 // used as keys in an sstable or a database.
 type Comparator struct {
-	c *C.rocksdb_comparator_t
+	c       *C.rocksdb_comparator_t
+	handler unsafe.Pointer
 }
 
 type ComparatorHandler interface {
@@ -27,18 +28,18 @@ type ComparatorHandler interface {
 // NewComparator creates a new comparator for the given handler.
 func NewComparator(handler ComparatorHandler) *Comparator {
 	h := unsafe.Pointer(&handler)
-	return NewNativeComparator(C.gorocksdb_comparator_create(h))
+	return &Comparator{c: C.gorocksdb_comparator_create(h), handler: h}
 }
 
 // NewNativeComparator allocates a Comparator object.
 func NewNativeComparator(c *C.rocksdb_comparator_t) *Comparator {
-	return &Comparator{c}
+	return &Comparator{c: c}
 }
 
 // Destroy deallocates the Comparator object.
 func (self *Comparator) Destroy() {
 	C.rocksdb_comparator_destroy(self.c)
-	self.c = nil
+	self.c, self.handler = nil, nil
 }
 
 //export gorocksdb_comparator_compare

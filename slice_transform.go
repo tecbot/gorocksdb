@@ -9,7 +9,8 @@ import (
 
 // A SliceTransform can be used as a prefix extractor.
 type SliceTransform struct {
-	c *C.rocksdb_slicetransform_t
+	c       *C.rocksdb_slicetransform_t
+	handler unsafe.Pointer
 }
 
 type SliceTransformHandler interface {
@@ -29,7 +30,7 @@ type SliceTransformHandler interface {
 // NewSliceTransform creates a new slice transform for the given handler.
 func NewSliceTransform(handler SliceTransformHandler) *SliceTransform {
 	h := unsafe.Pointer(&handler)
-	return NewNativeSliceTransform(C.gorocksdb_slicetransform_create(h))
+	return &SliceTransform{c: C.gorocksdb_slicetransform_create(h), handler: h}
 }
 
 // NewFixedPrefixTransform creates a new fixed prefix transform.
@@ -39,13 +40,13 @@ func NewFixedPrefixTransform(prefixLen int) *SliceTransform {
 
 // NewNativeSliceTransform allocates a SliceTransform object.
 func NewNativeSliceTransform(c *C.rocksdb_slicetransform_t) *SliceTransform {
-	return &SliceTransform{c}
+	return &SliceTransform{c: c}
 }
 
 // Destroy deallocates the SliceTransform object.
 func (self *SliceTransform) Destroy() {
 	C.rocksdb_slicetransform_destroy(self.c)
-	self.c = nil
+	self.c, self.handler = nil, nil
 }
 
 //export gorocksdb_slicetransform_transform

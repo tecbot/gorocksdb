@@ -10,7 +10,8 @@ import (
 // FilterPolicy is a factory type that allows the RocksDB database to create a
 // filter, such as a bloom filter, which will used to reduce reads.
 type FilterPolicy struct {
-	c *C.rocksdb_filterpolicy_t
+	c       *C.rocksdb_filterpolicy_t
+	handler unsafe.Pointer
 }
 
 type FilterPolicyHandler interface {
@@ -32,7 +33,7 @@ type FilterPolicyHandler interface {
 // NewFilterPolicy creates a new filter policy for the given handler.
 func NewFilterPolicy(handler FilterPolicyHandler) *FilterPolicy {
 	h := unsafe.Pointer(&handler)
-	return NewNativeFilterPolicy(C.gorocksdb_filterpolicy_create(h))
+	return &FilterPolicy{c: C.gorocksdb_filterpolicy_create(h), handler: h}
 }
 
 // Return a new filter policy that uses a bloom filter with approximately
@@ -52,13 +53,13 @@ func NewBloomFilter(bitsPerKey int) *FilterPolicy {
 
 // NewNativeFilterPolicy creates a filter policy object.
 func NewNativeFilterPolicy(c *C.rocksdb_filterpolicy_t) *FilterPolicy {
-	return &FilterPolicy{c}
+	return &FilterPolicy{c: c}
 }
 
 // Destroy deallocates the FilterPolicy object.
 func (self *FilterPolicy) Destroy() {
 	C.rocksdb_filterpolicy_destroy(self.c)
-	self.c = nil
+	self.c, self.handler = nil, nil
 }
 
 //export gorocksdb_filterpolicy_create_filter

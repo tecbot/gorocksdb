@@ -18,7 +18,8 @@ import (
 // Please read the RocksDB documentation <http://rocksdb.org/> for
 // more details and example implementations.
 type MergeOperator struct {
-	c *C.rocksdb_mergeoperator_t
+	c       *C.rocksdb_mergeoperator_t
+	handler unsafe.Pointer
 }
 
 type MergeOperatorHandler interface {
@@ -60,18 +61,18 @@ type MergeOperatorHandler interface {
 // NewMergeOperator creates a new merge operator for the given handler.
 func NewMergeOperator(handler MergeOperatorHandler) *MergeOperator {
 	h := unsafe.Pointer(&handler)
-	return NewNativeMergeOperator(C.gorocksdb_mergeoperator_create(h))
+	return &MergeOperator{c: C.gorocksdb_mergeoperator_create(h), handler: h}
 }
 
 // NewNativeMergeOperator allocates a MergeOperator object.
 func NewNativeMergeOperator(c *C.rocksdb_mergeoperator_t) *MergeOperator {
-	return &MergeOperator{c}
+	return &MergeOperator{c: c}
 }
 
 // Destroy deallocates the MergeOperator object.
 func (self *MergeOperator) Destroy() {
 	C.rocksdb_mergeoperator_destroy(self.c)
-	self.c = nil
+	self.c, self.handler = nil, nil
 }
 
 //export gorocksdb_mergeoperator_full_merge
