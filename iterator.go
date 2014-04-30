@@ -39,13 +39,13 @@ func NewNativeIterator(c *C.rocksdb_iterator_t) *Iterator {
 // Valid returns false only when an Iterator has iterated past either the
 // first or the last key in the database.
 func (self *Iterator) Valid() bool {
-	return CharToBool(C.rocksdb_iter_valid(self.c))
+	return C.rocksdb_iter_valid(self.c) != 0
 }
 
 // ValidForPrefix returns false only when an Iterator has iterated past the
 // first or the last key in the database or the specified prefix.
 func (self *Iterator) ValidForPrefix(prefix []byte) bool {
-	return CharToBool(C.rocksdb_iter_valid(self.c)) && bytes.HasPrefix(self.Value().Data(), prefix)
+	return C.rocksdb_iter_valid(self.c) != 0 && bytes.HasPrefix(self.Value().Data(), prefix)
 }
 
 // Key returns the key the iterator currently holds.
@@ -92,7 +92,7 @@ func (self *Iterator) SeekToLast() {
 
 // Seek moves the iterator to the position greater than or equal to the key.
 func (self *Iterator) Seek(key []byte) {
-	cKey := ByteToChar(key)
+	cKey := byteToChar(key)
 
 	C.rocksdb_iter_seek(self.c, cKey, C.size_t(len(key)))
 }

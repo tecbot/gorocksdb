@@ -53,39 +53,39 @@ func (self *SliceTransform) Destroy() {
 
 //export gorocksdb_slicetransform_transform
 func gorocksdb_slicetransform_transform(id int, cKey *C.char, cKeyLen C.size_t, cDstLen *C.size_t) *C.char {
-	key := CharToByte(cKey, cKeyLen)
+	key := charToByte(cKey, cKeyLen)
 
 	handler := stHandlers[id]
 	dst := handler.Transform(key)
 
 	*cDstLen = C.size_t(len(dst))
 
-	return ByteToChar(dst)
+	return byteToChar(dst)
 }
 
 //export gorocksdb_slicetransform_in_domain
 func gorocksdb_slicetransform_in_domain(id int, cKey *C.char, cKeyLen C.size_t) C.uchar {
-	key := CharToByte(cKey, cKeyLen)
+	key := charToByte(cKey, cKeyLen)
 
 	handler := stHandlers[id]
 	inDomain := handler.InDomain(key)
 
-	return BoolToChar(inDomain)
+	return boolToChar(inDomain)
 }
 
 //export gorocksdb_slicetransform_in_range
 func gorocksdb_slicetransform_in_range(id int, cKey *C.char, cKeyLen C.size_t) C.uchar {
-	key := CharToByte(cKey, cKeyLen)
+	key := charToByte(cKey, cKeyLen)
 
 	handler := stHandlers[id]
 	inRange := handler.InRange(key)
 
-	return BoolToChar(inRange)
+	return boolToChar(inRange)
 }
 
 //export gorocksdb_slicetransform_name
 func gorocksdb_slicetransform_name(id int) *C.char {
 	handler := stHandlers[id]
 
-	return StringToChar(handler.Name())
+	return stringToChar(handler.Name())
 }

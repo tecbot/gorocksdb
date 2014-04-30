@@ -36,7 +36,7 @@ type DB struct {
 // OpenDb opens a database with the specified options.
 func OpenDb(opts *Options, name string) (*DB, error) {
 	var cErr *C.char
-	db := C.rocksdb_open(opts.c, StringToChar(name), &cErr)
+	db := C.rocksdb_open(opts.c, stringToChar(name), &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 
@@ -53,7 +53,7 @@ func OpenDb(opts *Options, name string) (*DB, error) {
 // OpenDbForReadOnly opens a database with the specified options for readonly usage.
 func OpenDbForReadOnly(opts *Options, name string, errorIfLogFileExist bool) (*DB, error) {
 	var cErr *C.char
-	db := C.rocksdb_open_for_read_only(opts.c, StringToChar(name), BoolToChar(errorIfLogFileExist), &cErr)
+	db := C.rocksdb_open_for_read_only(opts.c, stringToChar(name), boolToChar(errorIfLogFileExist), &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 
@@ -74,7 +74,7 @@ func (self *DB) Name() string {
 
 // Get returns the data associated with the key from the database.
 func (self *DB) Get(opts *ReadOptions, key []byte) (*Slice, error) {
-	cKey := ByteToChar(key)
+	cKey := byteToChar(key)
 
 	var cErr *C.char
 	var cValLen C.size_t
@@ -90,8 +90,8 @@ func (self *DB) Get(opts *ReadOptions, key []byte) (*Slice, error) {
 
 // Put writes data associated with a key to the database.
 func (self *DB) Put(opts *WriteOptions, key, value []byte) error {
-	cKey := ByteToChar(key)
-	cValue := ByteToChar(value)
+	cKey := byteToChar(key)
+	cValue := byteToChar(value)
 
 	var cErr *C.char
 	C.rocksdb_put(self.c, opts.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)), &cErr)
@@ -106,7 +106,7 @@ func (self *DB) Put(opts *WriteOptions, key, value []byte) error {
 
 // Delete removes the data associated with the key from the database.
 func (self *DB) Delete(opts *WriteOptions, key []byte) error {
-	cKey := ByteToChar(key)
+	cKey := byteToChar(key)
 
 	var cErr *C.char
 	C.rocksdb_delete(self.c, opts.c, cKey, C.size_t(len(key)), &cErr)
@@ -121,8 +121,8 @@ func (self *DB) Delete(opts *WriteOptions, key []byte) error {
 
 // Merge merges the data associated with the key with the actual data in the database.
 func (self *DB) Merge(opts *WriteOptions, key []byte, value []byte) error {
-	cKey := ByteToChar(key)
-	cValue := ByteToChar(value)
+	cKey := byteToChar(key)
+	cValue := byteToChar(value)
 
 	var cErr *C.char
 	C.rocksdb_merge(self.c, opts.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)), &cErr)
@@ -165,7 +165,7 @@ func (self *DB) NewSnapshot() *Snapshot {
 
 // GetProperty returns the value of a database property.
 func (self *DB) GetProperty(propName string) string {
-	cValue := C.rocksdb_property_value(self.c, StringToChar(propName))
+	cValue := C.rocksdb_property_value(self.c, stringToChar(propName))
 	defer C.free(unsafe.Pointer(cValue))
 
 	return C.GoString(cValue)
@@ -187,9 +187,9 @@ func (self *DB) GetApproximateSizes(ranges []Range) []uint64 {
 	cStartLens := make([]C.size_t, len(ranges))
 	cLimitLens := make([]C.size_t, len(ranges))
 	for i, r := range ranges {
-		cStarts[i] = ByteToChar(r.Start)
+		cStarts[i] = byteToChar(r.Start)
 		cStartLens[i] = C.size_t(len(r.Start))
-		cLimits[i] = ByteToChar(r.Limit)
+		cLimits[i] = byteToChar(r.Limit)
 		cLimitLens[i] = C.size_t(len(r.Limit))
 	}
 
@@ -227,8 +227,8 @@ func (self *DB) GetLiveFilesMetaData() []LiveFileMetadata {
 // CompactRange runs a manual compaction on the Range of keys given. This is
 // not likely to be needed for typical usage.
 func (self *DB) CompactRange(r Range) {
-	cStart := ByteToChar(r.Start)
-	cLimit := ByteToChar(r.Limit)
+	cStart := byteToChar(r.Start)
+	cLimit := byteToChar(r.Limit)
 
 	C.rocksdb_compact_range(self.c, cStart, C.size_t(len(r.Start)), cLimit, C.size_t(len(r.Limit)))
 }
@@ -262,7 +262,7 @@ func (self *DB) DisableFileDeletions() error {
 // EnableFileDeletions enables file deletions for the database.
 func (self *DB) EnableFileDeletions(force bool) error {
 	var cErr *C.char
-	C.rocksdb_enable_file_deletions(self.c, BoolToChar(force), &cErr)
+	C.rocksdb_enable_file_deletions(self.c, boolToChar(force), &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 
@@ -276,7 +276,7 @@ func (self *DB) EnableFileDeletions(force bool) error {
 // reflect that. Supports deletion of sst and log files only. 'name' must be
 // path relative to the db directory. eg. 000001.sst, /archive/000003.log.
 func (self *DB) DeleteFile(name string) {
-	C.rocksdb_delete_file(self.c, StringToChar(name))
+	C.rocksdb_delete_file(self.c, stringToChar(name))
 }
 
 // Close closes the database.
@@ -288,7 +288,7 @@ func (self *DB) Close() {
 // filesystem.
 func DestroyDb(name string, opts *Options) error {
 	var cErr *C.char
-	C.rocksdb_destroy_db(opts.c, StringToChar(name), &cErr)
+	C.rocksdb_destroy_db(opts.c, stringToChar(name), &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 
@@ -301,7 +301,7 @@ func DestroyDb(name string, opts *Options) error {
 // RepairDb repairs a database.
 func RepairDb(name string, opts *Options) error {
 	var cErr *C.char
-	C.rocksdb_repair_db(opts.c, StringToChar(name), &cErr)
+	C.rocksdb_repair_db(opts.c, stringToChar(name), &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 

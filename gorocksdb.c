@@ -54,13 +54,3 @@ rocksdb_slicetransform_t* gorocksdb_slicetransform_create(size_t id) {
     	(unsigned char (*)(void*, const char*, size_t))(gorocksdb_slicetransform_in_range),
     	(const char* (*)(void*))(gorocksdb_slicetransform_name));
 }
-
-/* Hacks */
-
-char* gorocksdb_get_char_at_index(char **list, int idx) {
-	return list[idx];
-}
-
-size_t gorocksdb_get_int_at_index(size_t *list, int idx) {
-    return list[idx];
-}

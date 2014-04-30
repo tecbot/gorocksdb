@@ -24,23 +24,23 @@ func NewNativeWriteBatch(c *C.rocksdb_writebatch_t) *WriteBatch {
 
 // Put queues a key-value pair.
 func (self *WriteBatch) Put(key, value []byte) {
-	cKey := ByteToChar(key)
-	cValue := ByteToChar(value)
+	cKey := byteToChar(key)
+	cValue := byteToChar(value)
 
 	C.rocksdb_writebatch_put(self.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)))
 }
 
 // Merge queues a merge of "value" with the existing value of "key".
 func (self *WriteBatch) Merge(key, value []byte) {
-	cKey := ByteToChar(key)
-	cValue := ByteToChar(value)
+	cKey := byteToChar(key)
+	cValue := byteToChar(value)
 
 	C.rocksdb_writebatch_merge(self.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)))
 }
 
 // Delete queues a deletion of the data at key.
 func (self *WriteBatch) Delete(key []byte) {
-	cKey := ByteToChar(key)
+	cKey := byteToChar(key)
 
 	C.rocksdb_writebatch_delete(self.c, cKey, C.size_t(len(key)))
 }
@@ -50,7 +50,7 @@ func (self *WriteBatch) Data() []byte {
 	var cSize C.size_t
 	cValue := C.rocksdb_writebatch_data(self.c, &cSize)
 
-	return CharToByte(cValue, cSize)
+	return charToByte(cValue, cSize)
 }
 
 // Count returns the number of updates in the batch.

@@ -24,11 +24,3 @@ extern void gorocksdb_mergeoperator_delete_value(void* id, const char* v, size_t
 /* Slice Transform */
 
 extern rocksdb_slicetransform_t* gorocksdb_slicetransform_create(size_t id);
-
-/* Hacks */
-
-// According to the answer of :https://groups.google.com/forum/#!msg/golang-nuts/6toTzvJbyIs/sLQF6NLn-wIJ
-// There is no pointer arithmetic in Go.
-// the following functions gives an easy approach to get a entry at a specified index
-extern char* gorocksdb_get_char_at_index(char **list, int idx);
-extern size_t gorocksdb_get_int_at_index(size_t *list, int idx);
