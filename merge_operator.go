@@ -80,13 +80,12 @@ func (self *MergeOperator) Destroy() {
 //export gorocksdb_mergeoperator_full_merge
 func gorocksdb_mergeoperator_full_merge(id int, cKey *C.char, cKeyLen C.size_t, cExistingValue *C.char, cExistingValueLen C.size_t, cOperands **C.char, cOperandsLen *C.size_t, cNumOperands C.int, cSuccess *C.uchar, cNewValueLen *C.size_t) *C.char {
 	key := charToByte(cKey, cKeyLen)
+	rawOperands := charSlice(cOperands, cNumOperands)
+	operandsLen := sizeSlice(cOperandsLen, cNumOperands)
 	existingValue := charToByte(cExistingValue, cExistingValueLen)
 	operands := make([][]byte, int(cNumOperands))
-	for i, l := 0, int(cNumOperands); i < l; i++ {
-		cOperand := C.gorocksdb_get_char_at_index(cOperands, C.int(i))
-		cOperandLen := C.gorocksdb_get_int_at_index(cOperandsLen, C.int(i))
-
-		operands[i] = charToByte(cOperand, cOperandLen)
+	for i, len := range operandsLen {
+		operands[i] = charToByte(rawOperands[i], len)
 	}
 
 	handler := moHandlers[id]
@@ -102,12 +101,11 @@ func gorocksdb_mergeoperator_full_merge(id int, cKey *C.char, cKeyLen C.size_t, 
 //export gorocksdb_mergeoperator_partial_merge_multi
 func gorocksdb_mergeoperator_partial_merge_multi(id int, cKey *C.char, cKeyLen C.size_t, cOperands **C.char, cOperandsLen *C.size_t, cNumOperands C.int, cSuccess *C.uchar, cNewValueLen *C.size_t) *C.char {
 	key := charToByte(cKey, cKeyLen)
+	rawOperands := charSlice(cOperands, cNumOperands)
+	operandsLen := sizeSlice(cOperandsLen, cNumOperands)
 	operands := make([][]byte, int(cNumOperands))
-	for i, l := 0, int(cNumOperands); i < l; i++ {
-		cOperand := C.gorocksdb_get_char_at_index(cOperands, C.int(i))
-		cOperandLen := C.gorocksdb_get_int_at_index(cOperandsLen, C.int(i))
-
-		operands[i] = charToByte(cOperand, cOperandLen)
+	for i, len := range operandsLen {
+		operands[i] = charToByte(rawOperands[i], len)
 	}
 
 	var newValue []byte

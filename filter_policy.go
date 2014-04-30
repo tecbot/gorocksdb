@@ -66,12 +66,11 @@ func (self *FilterPolicy) Destroy() {
 
 //export gorocksdb_filterpolicy_create_filter
 func gorocksdb_filterpolicy_create_filter(id int, cKeys **C.char, cKeysLen *C.size_t, cNumKeys C.int, cDstLen *C.size_t) *C.char {
+	rawKeys := charSlice(cKeys, cNumKeys)
+	keysLen := sizeSlice(cKeysLen, cNumKeys)
 	keys := make([][]byte, int(cNumKeys))
-	for i, l := 0, int(cNumKeys); i < l; i++ {
-		cKey := C.gorocksdb_get_char_at_index(cKeys, C.int(i))
-		cKeyLen := C.gorocksdb_get_int_at_index(cKeysLen, C.int(i))
-
-		keys[i] = charToByte(cKey, cKeyLen)
+	for i, len := range keysLen {
+		keys[i] = charToByte(rawKeys[i], len)
 	}
 
 	handler := filterHandlers[id]

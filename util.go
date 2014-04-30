@@ -48,3 +48,23 @@ func stringToChar(s string) *C.char {
 
 	return (*C.char)(unsafe.Pointer(ptrStr.Data))
 }
+
+// charSlice converts a C array of *char to a []*C.char.
+func charSlice(data **C.char, len C.int) []*C.char {
+	var value []*C.char
+
+	sH := (*reflect.SliceHeader)(unsafe.Pointer(&value))
+	sH.Cap, sH.Len, sH.Data = int(len), int(len), uintptr(unsafe.Pointer(data))
+
+	return value
+}
+
+// sizeSlice converts a C array of size_t to a []C.size_t.
+func sizeSlice(data *C.size_t, len C.int) []C.size_t {
+	var value []C.size_t
+
+	sH := (*reflect.SliceHeader)(unsafe.Pointer(&value))
+	sH.Cap, sH.Len, sH.Data = int(len), int(len), uintptr(unsafe.Pointer(data))
+
+	return value
+}
