@@ -1,19 +1,10 @@
 package gorocksdb
 
 // #include "rocksdb/c.h"
-// #include "gorocksdb.h"
 import "C"
-import (
-	"unsafe"
-)
 
 // A SliceTransform can be used as a prefix extractor.
-type SliceTransform struct {
-	c       *C.rocksdb_slicetransform_t
-	handler unsafe.Pointer
-}
-
-type SliceTransformHandler interface {
+type SliceTransform interface {
 	// Transform a src in domain to a dst in the range.
 	Transform(src []byte) []byte
 
@@ -27,30 +18,34 @@ type SliceTransformHandler interface {
 	Name() string
 }
 
-// NewSliceTransform creates a new slice transform for the given handler.
-func NewSliceTransform(handler SliceTransformHandler) *SliceTransform {
-	h := unsafe.Pointer(&handler)
-	return &SliceTransform{c: C.gorocksdb_slicetransform_create(h), handler: h}
+// This type is a bit of a hack and will not behave as expected if clients try to
+// call its methods. It is handled specially in Options.
+type nativeSliceTransform struct {
+	c *C.rocksdb_slicetransform_t
 }
 
+func (st nativeSliceTransform) Transform(src []byte) []byte { return nil }
+
+func (st nativeSliceTransform) InDomain(src []byte) bool { return false }
+
+func (st nativeSliceTransform) InRange(src []byte) bool { return false }
+
+func (st nativeSliceTransform) Name() string { return "" }
+
 // NewFixedPrefixTransform creates a new fixed prefix transform.
-func NewFixedPrefixTransform(prefixLen int) *SliceTransform {
+func NewFixedPrefixTransform(prefixLen int) SliceTransform {
 	return NewNativeSliceTransform(C.rocksdb_slicetransform_create_fixed_prefix(C.size_t(prefixLen)))
 }
 
 // NewNativeSliceTransform allocates a SliceTransform object.
-func NewNativeSliceTransform(c *C.rocksdb_slicetransform_t) *SliceTransform {
-	return &SliceTransform{c: c}
-}
-
-// Destroy deallocates the SliceTransform object.
-func (self *SliceTransform) Destroy() {
-	C.rocksdb_slicetransform_destroy(self.c)
-	self.c, self.handler = nil, nil
+// The SliceTransform's methods are no-ops, but it is still used correctly by
+// RocksDB.
+func NewNativeSliceTransform(c *C.rocksdb_slicetransform_t) SliceTransform {
+	return nativeSliceTransform{c}
 }
 
 //export gorocksdb_slicetransform_transform
-func gorocksdb_slicetransform_transform(handler *SliceTransformHandler, cKey *C.char, cKeyLen C.size_t, cDstLen *C.size_t) *C.char {
+func gorocksdb_slicetransform_transform(handler *SliceTransform, cKey *C.char, cKeyLen C.size_t, cDstLen *C.size_t) *C.char {
 	key := charToByte(cKey, cKeyLen)
 
 	dst := (*handler).Transform(key)
@@ -61,7 +56,7 @@ func gorocksdb_slicetransform_transform(handler *SliceTransformHandler, cKey *C.
 }
 
 //export gorocksdb_slicetransform_in_domain
-func gorocksdb_slicetransform_in_domain(handler *SliceTransformHandler, cKey *C.char, cKeyLen C.size_t) C.uchar {
+func gorocksdb_slicetransform_in_domain(handler *SliceTransform, cKey *C.char, cKeyLen C.size_t) C.uchar {
 	key := charToByte(cKey, cKeyLen)
 
 	inDomain := (*handler).InDomain(key)
@@ -70,7 +65,7 @@ func gorocksdb_slicetransform_in_domain(handler *SliceTransformHandler, cKey *C.
 }
 
 //export gorocksdb_slicetransform_in_range
-func gorocksdb_slicetransform_in_range(handler *SliceTransformHandler, cKey *C.char, cKeyLen C.size_t) C.uchar {
+func gorocksdb_slicetransform_in_range(handler *SliceTransform, cKey *C.char, cKeyLen C.size_t) C.uchar {
 	key := charToByte(cKey, cKeyLen)
 
 	inRange := (*handler).InRange(key)
@@ -79,6 +74,6 @@ func gorocksdb_slicetransform_in_range(handler *SliceTransformHandler, cKey *C.c
 }
 
 //export gorocksdb_slicetransform_name
-func gorocksdb_slicetransform_name(handler *SliceTransformHandler) *C.char {
+func gorocksdb_slicetransform_name(handler *SliceTransform) *C.char {
 	return stringToChar((*handler).Name())
 }
