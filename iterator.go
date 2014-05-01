@@ -56,7 +56,7 @@ func (self *Iterator) Key() *Slice {
 		return nil
 	}
 
-	return NewSlice(cKey, cLen)
+	return &Slice{cKey, cLen, true}
 }
 
 // Value returns the value in the database the iterator currently holds.
@@ -67,7 +67,7 @@ func (self *Iterator) Value() *Slice {
 		return nil
 	}
 
-	return NewSlice(cVal, cLen)
+	return &Slice{cVal, cLen, true}
 }
 
 // Next moves the iterator to the next sequential key in the database.
