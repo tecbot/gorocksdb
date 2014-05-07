@@ -1,11 +1,7 @@
 package gorocksdb
 
 // #include "rocksdb/c.h"
-// #include "gorocksdb.h"
 import "C"
-import (
-	"unsafe"
-)
 
 // The Merge Operator
 //
@@ -17,12 +13,7 @@ import (
 //
 // Please read the RocksDB documentation <http://rocksdb.org/> for
 // more details and example implementations.
-type MergeOperator struct {
-	c       *C.rocksdb_mergeoperator_t
-	handler unsafe.Pointer
-}
-
-type MergeOperatorHandler interface {
+type MergeOperator interface {
 	// Gives the client a way to express the read -> modify -> write semantics
 	// key:           The key that's associated with this merge operation.
 	//                Client could multiplex the merge operator based on it
@@ -58,25 +49,25 @@ type MergeOperatorHandler interface {
 	Name() string
 }
 
-// NewMergeOperator creates a new merge operator for the given handler.
-func NewMergeOperator(handler MergeOperatorHandler) *MergeOperator {
-	h := unsafe.Pointer(&handler)
-	return &MergeOperator{c: C.gorocksdb_mergeoperator_create(h), handler: h}
+type nativeMergeOperator struct {
+	c *C.rocksdb_mergeoperator_t
 }
+
+func (mo nativeMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) { return nil, false }
+
+func (mo nativeMergeOperator) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) { return nil, false }
+
+func (mo nativeMergeOperator) Name() string { return "" }
 
 // NewNativeMergeOperator allocates a MergeOperator object.
-func NewNativeMergeOperator(c *C.rocksdb_mergeoperator_t) *MergeOperator {
-	return &MergeOperator{c: c}
-}
-
-// Destroy deallocates the MergeOperator object.
-func (self *MergeOperator) Destroy() {
-	C.rocksdb_mergeoperator_destroy(self.c)
-	self.c, self.handler = nil, nil
+// The MergeOperator's methods are no-ops, but it is still used correctly by
+// RocksDB.
+func NewNativeMergeOperator(c *C.rocksdb_mergeoperator_t) MergeOperator {
+	return nativeMergeOperator{c}
 }
 
 //export gorocksdb_mergeoperator_full_merge
-func gorocksdb_mergeoperator_full_merge(handler *MergeOperatorHandler, cKey *C.char, cKeyLen C.size_t, cExistingValue *C.char, cExistingValueLen C.size_t, cOperands **C.char, cOperandsLen *C.size_t, cNumOperands C.int, cSuccess *C.uchar, cNewValueLen *C.size_t) *C.char {
+func gorocksdb_mergeoperator_full_merge(handler *MergeOperator, cKey *C.char, cKeyLen C.size_t, cExistingValue *C.char, cExistingValueLen C.size_t, cOperands **C.char, cOperandsLen *C.size_t, cNumOperands C.int, cSuccess *C.uchar, cNewValueLen *C.size_t) *C.char {
 	key := charToByte(cKey, cKeyLen)
 	rawOperands := charSlice(cOperands, cNumOperands)
 	operandsLen := sizeSlice(cOperandsLen, cNumOperands)
@@ -96,7 +87,7 @@ func gorocksdb_mergeoperator_full_merge(handler *MergeOperatorHandler, cKey *C.c
 }
 
 //export gorocksdb_mergeoperator_partial_merge_multi
-func gorocksdb_mergeoperator_partial_merge_multi(handler *MergeOperatorHandler, cKey *C.char, cKeyLen C.size_t, cOperands **C.char, cOperandsLen *C.size_t, cNumOperands C.int, cSuccess *C.uchar, cNewValueLen *C.size_t) *C.char {
+func gorocksdb_mergeoperator_partial_merge_multi(handler *MergeOperator, cKey *C.char, cKeyLen C.size_t, cOperands **C.char, cOperandsLen *C.size_t, cNumOperands C.int, cSuccess *C.uchar, cNewValueLen *C.size_t) *C.char {
 	key := charToByte(cKey, cKeyLen)
 	rawOperands := charSlice(cOperands, cNumOperands)
 	operandsLen := sizeSlice(cOperandsLen, cNumOperands)
@@ -126,6 +117,6 @@ func gorocksdb_mergeoperator_partial_merge_multi(handler *MergeOperatorHandler, 
 }
 
 //export gorocksdb_mergeoperator_name
-func gorocksdb_mergeoperator_name(handler *MergeOperatorHandler) *C.char {
+func gorocksdb_mergeoperator_name(handler *MergeOperator) *C.char {
 	return stringToChar((*handler).Name())
 }

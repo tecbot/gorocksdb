@@ -1,20 +1,11 @@
 package gorocksdb
 
 // #include "rocksdb/c.h"
-// #include "gorocksdb.h"
 import "C"
-import (
-	"unsafe"
-)
 
 // A Comparator object provides a total order across slices that are
 // used as keys in an sstable or a database.
-type Comparator struct {
-	c       *C.rocksdb_comparator_t
-	handler unsafe.Pointer
-}
-
-type ComparatorHandler interface {
+type Comparator interface {
 	// Three-way comparison. Returns value:
 	//   < 0 iff "a" < "b",
 	//   == 0 iff "a" == "b",
@@ -25,25 +16,23 @@ type ComparatorHandler interface {
 	Name() string
 }
 
-// NewComparator creates a new comparator for the given handler.
-func NewComparator(handler ComparatorHandler) *Comparator {
-	h := unsafe.Pointer(&handler)
-	return &Comparator{c: C.gorocksdb_comparator_create(h), handler: h}
+type nativeComparator struct {
+	c *C.rocksdb_comparator_t
 }
+
+func (c nativeComparator) Compare(a, b []byte) int { return 0 }
+
+func (c nativeComparator) Name() string { return "" }
 
 // NewNativeComparator allocates a Comparator object.
-func NewNativeComparator(c *C.rocksdb_comparator_t) *Comparator {
-	return &Comparator{c: c}
-}
-
-// Destroy deallocates the Comparator object.
-func (self *Comparator) Destroy() {
-	C.rocksdb_comparator_destroy(self.c)
-	self.c, self.handler = nil, nil
+// The Comparator's methods are no-ops, but it is still used correctly by
+// RocksDB.
+func NewNativeComparator(c *C.rocksdb_comparator_t) Comparator {
+	return nativeComparator{c}
 }
 
 //export gorocksdb_comparator_compare
-func gorocksdb_comparator_compare(handler *ComparatorHandler, cKeyA *C.char, cKeyALen C.size_t, cKeyB *C.char, cKeyBLen C.size_t) C.int {
+func gorocksdb_comparator_compare(handler *Comparator, cKeyA *C.char, cKeyALen C.size_t, cKeyB *C.char, cKeyBLen C.size_t) C.int {
 	keyA := charToByte(cKeyA, cKeyALen)
 	keyB := charToByte(cKeyB, cKeyBLen)
 
@@ -53,6 +42,6 @@ func gorocksdb_comparator_compare(handler *ComparatorHandler, cKeyA *C.char, cKe
 }
 
 //export gorocksdb_comparator_name
-func gorocksdb_comparator_name(handler *ComparatorHandler) *C.char {
+func gorocksdb_comparator_name(handler *Comparator) *C.char {
 	return stringToChar((*handler).Name())
 }

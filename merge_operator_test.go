@@ -6,11 +6,11 @@ import (
 	"testing"
 )
 
-type testMergeOperatorHandler struct {
+type testMergeOperator struct {
 	initiated bool
 }
 
-func (self *testMergeOperatorHandler) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
+func (self *testMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
 	for _, operand := range operands {
 		existingValue = append(existingValue, operand...)
 	}
@@ -18,11 +18,11 @@ func (self *testMergeOperatorHandler) FullMerge(key, existingValue []byte, opera
 	return existingValue, true
 }
 
-func (self *testMergeOperatorHandler) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) {
+func (self *testMergeOperator) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) {
 	return append(leftOperand, rightOperand...), true
 }
 
-func (self *testMergeOperatorHandler) Name() string {
+func (self *testMergeOperator) Name() string {
 	self.initiated = true
 	return "gorocksdb.test"
 }
@@ -31,31 +31,27 @@ func TestNewMergeOperator(t *testing.T) {
 	dbName := os.TempDir() + "/TestNewMergeOperator"
 
 	Convey("Subject: Custom merge operator", t, func() {
-		Convey("When create a custom merge operator then it should not panic", func() {
-			handler := &testMergeOperatorHandler{}
-			merger := NewMergeOperator(handler)
+		Convey("When passed to the db as merge operator then it should not panic", func() {
+			merger := &testMergeOperator{}
+			options := NewDefaultOptions()
+			DestroyDb(dbName, options)
+			options.SetCreateIfMissing(true)
+			options.SetMergeOperator(merger)
+			options.SetMaxSuccessiveMerges(5)
 
-			Convey("When passed to the db as merge operator then it should not panic", func() {
-				options := NewDefaultOptions()
-				DestroyDb(dbName, options)
-				options.SetCreateIfMissing(true)
-				options.SetMergeOperator(merger)
-				options.SetMaxSuccessiveMerges(5)
+			db, err := OpenDb(options, dbName)
+			So(err, ShouldBeNil)
+			So(merger.initiated, ShouldBeTrue)
 
-				db, err := OpenDb(options, dbName)
+			Convey("When merge the value 'foo' with 'bar' then the new value should be 'foobar'", func() {
+				wo := NewDefaultWriteOptions()
+				So(db.Put(wo, []byte("foo"), []byte("foo")), ShouldBeNil)
+				So(db.Merge(wo, []byte("foo"), []byte("bar")), ShouldBeNil)
+
+				value, err := db.Get(NewDefaultReadOptions(), []byte("foo"))
 				So(err, ShouldBeNil)
-				So(handler.initiated, ShouldBeTrue)
-
-				Convey("When merge the value 'foo' with 'bar' then the new value should be 'foobar'", func() {
-					wo := NewDefaultWriteOptions()
-					So(db.Put(wo, []byte("foo"), []byte("foo")), ShouldBeNil)
-					So(db.Merge(wo, []byte("foo"), []byte("bar")), ShouldBeNil)
-
-					value, err := db.Get(NewDefaultReadOptions(), []byte("foo"))
-					So(err, ShouldBeNil)
-					So(value.Data(), ShouldResemble, []byte("foobar"))
-					value.Free()
-				})
+				So(value.Data(), ShouldResemble, []byte("foobar"))
+				value.Free()
 			})
 		})
 	})
@@ -65,8 +61,7 @@ func TestMergeOperatorNonExisitingValue(t *testing.T) {
 	dbName := os.TempDir() + "/TestMergeOperatorNonExisitingValue"
 
 	Convey("Subject: Merge of a non-existing value", t, func() {
-		handler := &testMergeOperatorHandler{}
-		merger := NewMergeOperator(handler)
+		merger := &testMergeOperator{}
 
 		options := NewDefaultOptions()
 		DestroyDb(dbName, options)
@@ -76,7 +71,7 @@ func TestMergeOperatorNonExisitingValue(t *testing.T) {
 
 		db, err := OpenDb(options, dbName)
 		So(err, ShouldBeNil)
-		So(handler.initiated, ShouldBeTrue)
+		So(merger.initiated, ShouldBeTrue)
 
 		Convey("When merge a non-existing value with 'bar' then the new value should be 'bar'", func() {
 			wo := NewDefaultWriteOptions()

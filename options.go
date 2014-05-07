@@ -1,7 +1,11 @@
 package gorocksdb
 
 // #include "rocksdb/c.h"
+// #include "gorocksdb.h"
 import "C"
+import (
+	"unsafe"
+)
 
 // DB contents are stored in a set of blocks, each of which holds a
 // sequence of key,value pairs. Each block may be compressed before
@@ -53,6 +57,12 @@ type Options struct {
 	cache *Cache
 	fp    *FilterPolicy
 	st    *SliceTransform
+
+	// We keep these so we can free their memory in Destroy.
+	ccmp *C.rocksdb_comparator_t
+	cfp  *C.rocksdb_filterpolicy_t
+	cmo  *C.rocksdb_mergeoperator_t
+	cst  *C.rocksdb_slicetransform_t
 }
 
 // NewDefaultOptions creates the default Options.
@@ -70,18 +80,28 @@ func NewNativeOptions(c *C.rocksdb_options_t) *Options {
 
 // Comparator used to define the order of keys in the table.
 // Default: a comparator that uses lexicographic byte-wise ordering
-func (self *Options) SetComparator(value *Comparator) {
-	self.cmp = value
-
-	C.rocksdb_options_set_comparator(self.c, value.c)
+func (self *Options) SetComparator(value Comparator) {
+	if nc, ok := value.(nativeComparator); ok {
+		self.ccmp = nc.c
+	} else {
+		h := unsafe.Pointer(&value)
+		self.cmp = &value
+		self.ccmp = C.gorocksdb_comparator_create(h)
+	}
+	C.rocksdb_options_set_comparator(self.c, self.ccmp)
 }
 
 // The merge operator will called if Merge operations are used.
 // Default: nil
-func (self *Options) SetMergeOperator(value *MergeOperator) {
-	self.mo = value
-
-	C.rocksdb_options_set_merge_operator(self.c, value.c)
+func (self *Options) SetMergeOperator(value MergeOperator) {
+	if nmo, ok := value.(nativeMergeOperator); ok {
+		self.cmo = nmo.c
+	} else {
+		h := unsafe.Pointer(&value)
+		self.mo = &value
+		self.cmo = C.gorocksdb_mergeoperator_create(h)
+	}
+	C.rocksdb_options_set_merge_operator(self.c, self.cmo)
 }
 
 // A single CompactionFilter instance to call into during compaction.
@@ -283,10 +303,15 @@ func (self *Options) SetCompressionOptions(value *CompressionOptions) {
 // Many applications will benefit from passing the result of
 // NewBloomFilterPolicy() here.
 // Default: nil
-func (self *Options) SetFilterPolicy(value *FilterPolicy) {
-	self.fp = value
-
-	C.rocksdb_options_set_filter_policy(self.c, value.c)
+func (self *Options) SetFilterPolicy(value FilterPolicy) {
+	if nfp, ok := value.(nativeFilterPolicy); ok {
+		self.cfp = nfp.c
+	} else {
+		h := unsafe.Pointer(&value)
+		self.fp = &value
+		self.cfp = C.gorocksdb_filterpolicy_create(h)
+	}
+	C.rocksdb_options_set_filter_policy(self.c, self.cfp)
 }
 
 // If set, use the specified function to determine the
@@ -295,10 +320,15 @@ func (self *Options) SetFilterPolicy(value *FilterPolicy) {
 // cost for scans when a prefix is passed via ReadOptions to
 // db.NewIterator().
 // Default: nil
-func (self *Options) SetPrefixExtractor(value *SliceTransform) {
-	self.st = value
-
-	C.rocksdb_options_set_prefix_extractor(self.c, value.c)
+func (self *Options) SetPrefixExtractor(value SliceTransform) {
+	if nst, ok := value.(nativeSliceTransform); ok {
+		self.cst = nst.c
+	} else {
+		h := unsafe.Pointer(&value)
+		self.st = &value
+		self.cst = C.gorocksdb_slicetransform_create(h)
+	}
+	C.rocksdb_options_set_prefix_extractor(self.c, self.cst)
 }
 
 // If true, place whole keys in the filter (not just prefixes).
@@ -891,6 +921,15 @@ func (self *Options) SetPlainTableFactory(keyLen uint32, bloomBitsPerKey int, ha
 // Destroy deallocates the Options object.
 func (self *Options) Destroy() {
 	C.rocksdb_options_destroy(self.c)
+	if self.ccmp != nil {
+		C.rocksdb_comparator_destroy(self.ccmp)
+	}
+	if self.cmo != nil {
+		C.rocksdb_mergeoperator_destroy(self.cmo)
+	}
+	if self.cst != nil {
+		C.rocksdb_slicetransform_destroy(self.cst)
+	}
 	self.c = nil
 	self.cmp = nil
 	self.mo = nil

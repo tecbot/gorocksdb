@@ -6,23 +6,23 @@ import (
 	"testing"
 )
 
-type testSliceTransformHandler struct {
+type testSliceTransform struct {
 	initiated bool
 }
 
-func (self *testSliceTransformHandler) Transform(src []byte) []byte {
+func (self *testSliceTransform) Transform(src []byte) []byte {
 	return src[0:3]
 }
 
-func (self *testSliceTransformHandler) InDomain(src []byte) bool {
+func (self *testSliceTransform) InDomain(src []byte) bool {
 	return len(src) >= 3
 }
 
-func (self *testSliceTransformHandler) InRange(src []byte) bool {
+func (self *testSliceTransform) InRange(src []byte) bool {
 	return len(src) == 3
 }
 
-func (self *testSliceTransformHandler) Name() string {
+func (self *testSliceTransform) Name() string {
 	self.initiated = true
 	return "gorocksdb.test"
 }
@@ -31,8 +31,7 @@ func TestCustomSliceTransform(t *testing.T) {
 	dbName := os.TempDir() + "/TestNewSliceTransform"
 
 	Convey("Subject: Prefix filtering with custom slice transform", t, func() {
-		handler := &testSliceTransformHandler{}
-		sliceTransform := NewSliceTransform(handler)
+		sliceTransform := &testSliceTransform{}
 
 		options := NewDefaultOptions()
 		DestroyDb(dbName, options)
