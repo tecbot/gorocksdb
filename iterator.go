@@ -45,7 +45,7 @@ func (self *Iterator) Valid() bool {
 // ValidForPrefix returns false only when an Iterator has iterated past the
 // first or the last key in the database or the specified prefix.
 func (self *Iterator) ValidForPrefix(prefix []byte) bool {
-	return C.rocksdb_iter_valid(self.c) != 0 && bytes.HasPrefix(self.Value().Data(), prefix)
+	return C.rocksdb_iter_valid(self.c) != 0 && bytes.HasPrefix(self.Key().Data(), prefix)
 }
 
 // Key returns the key the iterator currently holds.
