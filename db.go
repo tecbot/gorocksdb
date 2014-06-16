@@ -1,10 +1,15 @@
 package gorocksdb
 
-// #cgo LDFLAGS: -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy
+// #cgo CXXFLAGS: -lstdc++ -lm -lz -lbz2 -lsnappy -std=c++11 -w
+// #cgo LDFLAGS: -lstdc++ -lm -lz -lbz2 -lsnappy
 // #include <stdlib.h>
 // #include "rocksdb/c.h"
+// #define ROCKSDB_PLATFORM_POSIX
 import "C"
 
+// TODO snappy w/o make install'd working?
+// OLD FLAGS BELOW
+// #cgo LDFLAGS: -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy
 import (
 	"errors"
 	"unsafe"
