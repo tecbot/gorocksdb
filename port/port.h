@@ -16,5 +16,6 @@
 // porting to a new platform, see "port_example.h" for documentation
 // of what the new port_<platform>.h file must provide.
 #include "port/port_posix.h"
+#define SNAPPY
 
 #endif  // STORAGE_LEVELDB_PORT_PORT_H_
