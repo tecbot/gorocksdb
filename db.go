@@ -1,19 +1,21 @@
 package gorocksdb
 
-// #cgo CXXFLAGS: -lstdc++ -lm -std=c++11 -w
-// #cgo LDFLAGS: -lstdc++ -lm
+// #cgo CXXFLAGS: -std=c++11 -w
+// #cgo LDFLAGS: -static-libgcc -static-libstdc++
 // #include <stdlib.h>
 // #include "rocksdb/c.h"
 // #define ROCKSDB_PLATFORM_POSIX
 import "C"
 
-// TODO snappy w/o make install'd working?
-// OLD FLAGS BELOW
-// #cgo LDFLAGS: -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy
 import (
 	"errors"
 	"unsafe"
 )
+
+// OLD FLAGS BELOW
+// #cgo LDFLAGS: -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy
+// RU
+// #cgo LDFLAGS: -lstdc++ -lm
 
 // Range is a range of keys in the database. GetApproximateSizes calls with it
 // begin at the key Start and end right before the key Limit.
