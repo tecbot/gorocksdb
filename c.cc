@@ -562,6 +562,12 @@ rocksdb_writebatch_t* rocksdb_writebatch_create() {
   return new rocksdb_writebatch_t;
 }
 
+rocksdb_writebatch_t* rocksdb_writebatch_create_from(const char* serialized) {
+  rocksdb_writebatch_t* b = new rocksdb_writebatch_t;
+  b->rep = WriteBatch(std::string(serialized));
+  return b;
+}
+
 void rocksdb_writebatch_destroy(rocksdb_writebatch_t* b) {
   delete b;
 }
