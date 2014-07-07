@@ -204,7 +204,7 @@ extern void rocksdb_iter_get_error(const rocksdb_iterator_t*, char** errptr);
 /* Write batch */
 
 extern rocksdb_writebatch_t* rocksdb_writebatch_create();
-extern rocksdb_writebatch_t* rocksdb_writebatch_create_from(const char* serialized);
+extern rocksdb_writebatch_t* rocksdb_writebatch_create_from(const char* serialized, size_t size);
 extern void rocksdb_writebatch_destroy(rocksdb_writebatch_t*);
 extern void rocksdb_writebatch_clear(rocksdb_writebatch_t*);
 extern int rocksdb_writebatch_count(rocksdb_writebatch_t*);

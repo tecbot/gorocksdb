@@ -24,7 +24,7 @@ func NewNativeWriteBatch(c *C.rocksdb_writebatch_t) *WriteBatch {
 
 // WriteBatchFrom creates a write batch from a serialized WriteBatch.
 func WriteBatchFrom(data []byte) *WriteBatch {
-	return NewNativeWriteBatch(C.rocksdb_writebatch_create_from(byteToChar(data)))
+	return NewNativeWriteBatch(C.rocksdb_writebatch_create_from(byteToChar(data), C.size_t(len(data))))
 }
 
 // Put queues a key-value pair.
