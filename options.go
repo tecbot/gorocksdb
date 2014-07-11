@@ -25,6 +25,7 @@ type CompactionStyle uint
 const (
 	LevelCompactionStyle     = CompactionStyle(0)
 	UniversalCompactionStyle = CompactionStyle(1)
+	FIFOCompactionStyle      = CompactionStyle(2)
 )
 
 type CompactionAccessPattern uint
@@ -184,6 +185,44 @@ func (self *Options) SetInfoLogLevel(value InfoLogLevel) {
 
 // -------------------
 // Parameters that affect performance
+
+// By default, RocksDB uses only one background thread for flush and
+// compaction. Calling this function will set it up such that total of
+// `total_threads` is used. Good value for `total_threads` is the number of
+// cores. You almost definitely want to call this function if your system is
+// bottlenecked by RocksDB.
+func (self *Options) IncreaseParallelism(total_threads int) {
+	C.rocksdb_options_increase_parallelism(self.c, C.int(total_threads))
+}
+
+// Use this if you don't need to keep the data sorted, i.e. you'll never use
+// an iterator, only Put() and Get() API calls
+func (self *Options) OptimizeForPointLookup() {
+	C.rocksdb_options_optimize_for_point_lookup(self.c)
+}
+
+// Default values for some parameters in ColumnFamilyOptions are not
+// optimized for heavy workloads and big datasets, which means you might
+// observe write stalls under some conditions. As a starting point for tuning
+// RocksDB options, use the following two functions:
+// * OptimizeLevelStyleCompaction -- optimizes level style compaction
+// * OptimizeUniversalStyleCompaction -- optimizes universal style compaction
+// Universal style compaction is focused on reducing Write Amplification
+// Factor for big data sets, but increases Space Amplification. You can learn
+// more about the different styles here:
+// https://github.com/facebook/rocksdb/wiki/Rocksdb-Architecture-Guide
+// Make sure to also call IncreaseParallelism(), which will provide the
+// biggest performance gains.
+// Note: we might use more memory than memtable_memory_budget during high
+// write rate period
+func (self *Options) OptimizeLevelStyleCompaction(memtable_memory_budget uint64) {
+	C.rocksdb_options_optimize_level_style_compaction(self.c, C.uint64_t(memtable_memory_budget))
+}
+
+// See note on OptimizeLevelStyleCompaction.
+func (self *Options) OptimizeUniversalStyleCompaction(memtable_memory_budget uint64) {
+	C.rocksdb_options_optimize_universal_style_compaction(self.c, C.uint64_t(memtable_memory_budget))
+}
 
 // Amount of data to build up in memory (backed by an unsorted log
 // on disk) before converting to a sorted on-disk file.
@@ -755,6 +794,12 @@ func (self *Options) SetCompactionStyle(value CompactionStyle) {
 // Default: nil
 func (self *Options) SetUniversalCompactionOptions(value *UniversalCompactionOptions) {
 	C.rocksdb_options_set_universal_compaction_options(self.c, value.c)
+}
+
+// The options for FIFO compaction style
+// Default: nil
+func (self *Options) SetFIFOCompactionOptions(value *FIFOCompactionOptions) {
+	C.rocksdb_options_set_fifo_compaction_options(self.c, value.c)
 }
 
 // If true, compaction will verify checksum on every read that happens
