@@ -12,6 +12,34 @@ const (
 	CompactionStopStyleTotalSize   = UniversalCompactionStopStyle(1)
 )
 
+// FIFOCompactionOptions represent all of the available options for
+// FIFO compaction.
+type FIFOCompactionOptions struct {
+	c *C.rocksdb_fifo_compaction_options_t
+}
+
+// NewDefaultFIFOCompactionOptions creates a default FIFOCompactionOptions object.
+func NewDefaultFIFOCompactionOptions() *FIFOCompactionOptions {
+	return NewNativeFIFOCompactionOptions(C.rocksdb_fifo_compaction_options_create())
+}
+
+// NewDefaultFIFOCompactionOptions creates a default FIFOCompactionOptions object.
+func NewNativeFIFOCompactionOptions(c *C.rocksdb_fifo_compaction_options_t) *FIFOCompactionOptions {
+	return &FIFOCompactionOptions{c}
+}
+
+// Once the total sum of table files reaches this, we will delete the oldest
+// table file
+// Default: 1GB
+func (self *FIFOCompactionOptions) SetMaxTableFilesSize(value uint64) {
+	C.rocksdb_fifo_compaction_options_set_max_table_files_size(self.c, C.uint64_t(value))
+}
+
+// Destroy deallocates the FIFOCompactionOptions object.
+func (self *FIFOCompactionOptions) Destroy() {
+	C.rocksdb_fifo_compaction_options_destroy(self.c)
+}
+
 // UniversalCompactionOptions represent all of the available options for
 // universal compaction.
 type UniversalCompactionOptions struct {
