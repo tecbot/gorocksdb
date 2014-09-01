@@ -15,6 +15,16 @@ rocksdb_comparator_t* gorocksdb_comparator_create(void* state) {
         (const char *(*)(void*))(gorocksdb_comparator_name));
 }
 
+/* CompactionFilter */
+
+rocksdb_compactionfilter_t* gorocksdb_compactionfilter_create(void* state) {
+    return rocksdb_compactionfilter_create(
+        state,
+        gorocksdb_destruct_handler,
+        (unsigned char (*)(void*, int, const char*, size_t, const char*, size_t, char**, size_t*, unsigned char*))(gorocksdb_compactionfilter_filter),
+        (const char *(*)(void*))(gorocksdb_comparator_name));
+}
+
 /* Filter Policy */
 
 rocksdb_filterpolicy_t* gorocksdb_filterpolicy_create(void* state) {

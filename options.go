@@ -58,12 +58,14 @@ type Options struct {
 	cache *Cache
 	fp    *FilterPolicy
 	st    *SliceTransform
+	cf    *CompactionFilter
 
 	// We keep these so we can free their memory in Destroy.
 	ccmp *C.rocksdb_comparator_t
 	cfp  *C.rocksdb_filterpolicy_t
 	cmo  *C.rocksdb_mergeoperator_t
 	cst  *C.rocksdb_slicetransform_t
+	ccf  *C.rocksdb_compactionfilter_t
 }
 
 // NewDefaultOptions creates the default Options.
@@ -78,6 +80,16 @@ func NewNativeOptions(c *C.rocksdb_options_t) *Options {
 
 // -------------------
 // Parameters that affect behavior
+
+// If set, the specified compaction filter will be applied
+// on compactions.
+// Default: nil
+func (self *Options) SetCompactionFilter(filter CompactionFilter) {
+	h := unsafe.Pointer(&filter)
+	self.cf = &filter
+	self.ccf = C.gorocksdb_compactionfilter_create(h)
+	C.rocksdb_options_set_compaction_filter(self.c, self.ccf)
+}
 
 // Comparator used to define the order of keys in the table.
 // Default: a comparator that uses lexicographic byte-wise ordering
@@ -975,6 +987,9 @@ func (self *Options) Destroy() {
 	if self.cst != nil {
 		C.rocksdb_slicetransform_destroy(self.cst)
 	}
+	if self.ccf != nil {
+		C.rocksdb_compactionfilter_destroy(self.ccf)
+	}
 	self.c = nil
 	self.cmp = nil
 	self.mo = nil
@@ -982,4 +997,5 @@ func (self *Options) Destroy() {
 	self.cache = nil
 	self.fp = nil
 	self.st = nil
+	self.cf = nil
 }
