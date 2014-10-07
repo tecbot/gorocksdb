@@ -1,9 +1,10 @@
 package gorocksdb
 
 import (
-	. "github.com/smartystreets/goconvey/convey"
 	"os"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 type testSliceTransform struct {
@@ -36,9 +37,10 @@ func TestCustomSliceTransform(t *testing.T) {
 		options := NewDefaultOptions()
 		DestroyDb(dbName, options)
 
-		options.SetFilterPolicy(NewBloomFilter(10))
 		options.SetPrefixExtractor(sliceTransform)
 		options.SetHashSkipListRep(50000, 4, 4)
+		options.SetAllowMmapReads(true)
+		options.SetAllowMmapWrites(true)
 		options.SetPlainTableFactory(4, 10, 0.75, 16)
 		options.SetCreateIfMissing(true)
 
@@ -76,8 +78,9 @@ func TestFixedPrefixTransform(t *testing.T) {
 		options := NewDefaultOptions()
 		DestroyDb(dbName, options)
 
-		options.SetFilterPolicy(NewBloomFilter(10))
 		options.SetHashSkipListRep(50000, 4, 4)
+		options.SetAllowMmapReads(true)
+		options.SetAllowMmapWrites(true)
 		options.SetPlainTableFactory(4, 10, 0.75, 16)
 		options.SetCreateIfMissing(true)
 

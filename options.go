@@ -52,17 +52,15 @@ type Options struct {
 	c *C.rocksdb_options_t
 
 	// hold references for GC
-	cmp   *Comparator
-	mo    *MergeOperator
-	env   *Env
-	cache *Cache
-	fp    *FilterPolicy
-	st    *SliceTransform
-	cf    *CompactionFilter
+	cmp  *Comparator
+	mo   *MergeOperator
+	env  *Env
+	st   *SliceTransform
+	cf   *CompactionFilter
+	bbto *BlockBasedTableOptions
 
 	// We keep these so we can free their memory in Destroy.
 	ccmp *C.rocksdb_comparator_t
-	cfp  *C.rocksdb_filterpolicy_t
 	cmo  *C.rocksdb_mergeoperator_t
 	cst  *C.rocksdb_slicetransform_t
 	ccf  *C.rocksdb_compactionfilter_t
@@ -209,8 +207,8 @@ func (self *Options) IncreaseParallelism(total_threads int) {
 
 // Use this if you don't need to keep the data sorted, i.e. you'll never use
 // an iterator, only Put() and Get() API calls
-func (self *Options) OptimizeForPointLookup() {
-	C.rocksdb_options_optimize_for_point_lookup(self.c)
+func (self *Options) OptimizeForPointLookup(block_cache_size_mb uint64) {
+	C.rocksdb_options_optimize_for_point_lookup(self.c, C.uint64_t(block_cache_size_mb))
 }
 
 // Default values for some parameters in ColumnFamilyOptions are not
@@ -278,42 +276,6 @@ func (self *Options) SetMaxOpenFiles(value int) {
 	C.rocksdb_options_set_max_open_files(self.c, C.int(value))
 }
 
-// Control over blocks (user data is stored in a set of blocks, and
-// a block is the unit of reading from disk).
-//
-// If set, use the specified cache for blocks.
-// If nil, rocksdb will automatically create and use an 8MB internal cache.
-// Default: nil
-func (self *Options) SetBlockCache(value *Cache) {
-	self.cache = value
-
-	C.rocksdb_options_set_cache(self.c, value.c)
-}
-
-// If set, use the specified cache for compressed blocks.
-// If nil, rocksdb will not use a compressed block cache.
-// Default: nil
-func (self *Options) SetBlockCacheCompressed(value *Cache) {
-	C.rocksdb_options_set_cache_compressed(self.c, value.c)
-}
-
-// Approximate size of user data packed per block. Note that the
-// block size specified here corresponds to uncompressed data. The
-// actual size of the unit read from disk may be smaller if
-// compression is enabled. This parameter can be changed dynamically.
-// Default: 4K
-func (self *Options) SetBlockSize(value int) {
-	C.rocksdb_options_set_block_size(self.c, C.size_t(value))
-}
-
-// Number of keys between restart points for delta encoding of keys.
-// This parameter can be changed dynamically. Most clients should
-// leave this parameter alone.
-// Default: 16
-func (self *Options) SetBlockRestartInterval(value int) {
-	C.rocksdb_options_set_block_restart_interval(self.c, C.int(value))
-}
-
 // Compress blocks using the specified compression algorithm. This
 // parameter can be changed dynamically.
 //
@@ -350,21 +312,6 @@ func (self *Options) SetCompressionOptions(value *CompressionOptions) {
 	C.rocksdb_options_set_compression_options(self.c, C.int(value.WindowBits), C.int(value.Level), C.int(value.Strategy))
 }
 
-// If set use the specified filter policy to reduce disk reads.
-// Many applications will benefit from passing the result of
-// NewBloomFilterPolicy() here.
-// Default: nil
-func (self *Options) SetFilterPolicy(value FilterPolicy) {
-	if nfp, ok := value.(nativeFilterPolicy); ok {
-		self.cfp = nfp.c
-	} else {
-		h := unsafe.Pointer(&value)
-		self.fp = &value
-		self.cfp = C.gorocksdb_filterpolicy_create(h)
-	}
-	C.rocksdb_options_set_filter_policy(self.c, self.cfp)
-}
-
 // If set, use the specified function to determine the
 // prefixes for keys. These prefixes will be placed in the filter.
 // Depending on the workload, this can reduce the number of read-IOP
@@ -380,13 +327,6 @@ func (self *Options) SetPrefixExtractor(value SliceTransform) {
 		self.cst = C.gorocksdb_slicetransform_create(h)
 	}
 	C.rocksdb_options_set_prefix_extractor(self.c, self.cst)
-}
-
-// If true, place whole keys in the filter (not just prefixes).
-// This must generally be true for gets to be efficient.
-// Default: true
-func (self *Options) SetWholeKeyFiltering(value bool) {
-	C.rocksdb_options_set_whole_key_filtering(self.c, boolToChar(value))
 }
 
 // Number of levels for this database.
@@ -523,13 +463,6 @@ func (self *Options) SetUseFsync(value bool) {
 	C.rocksdb_options_set_use_fsync(self.c, C.int(btoi(value)))
 }
 
-// This number controls how often a new scribe log about
-// db deploy stats is written out. -1 indicates no logging at all.
-// Default: 1800 (half an hour)
-func (self *Options) SetDbStatsLogInterval(value int) {
-	C.rocksdb_options_set_db_stats_log_interval(self.c, C.int(value))
-}
-
 // This specifies the absolute info LOG dir.
 // If it is empty, the log files will be in the same dir as data.
 // If it is non empty, the log files will be in the specified dir,
@@ -537,7 +470,9 @@ func (self *Options) SetDbStatsLogInterval(value int) {
 // name's prefix.
 // Default: empty
 func (self *Options) SetDbLogDir(value string) {
-	C.rocksdb_options_set_db_log_dir(self.c, stringToChar(value))
+	cvalue := C.CString(value)
+	defer C.free(unsafe.Pointer(cvalue))
+	C.rocksdb_options_set_db_log_dir(self.c, cvalue)
 }
 
 // This specifies the absolute dir path for write-ahead logs (WAL).
@@ -546,16 +481,9 @@ func (self *Options) SetDbLogDir(value string) {
 // When destroying the db, all log files and the dir itself is deleted.
 // Default: empty
 func (self *Options) SetWalDir(value string) {
-	C.rocksdb_options_set_wal_dir(self.c, stringToChar(value))
-}
-
-// Disable compaction triggered by seek.
-// With bloom filter and fast storage, a miss on one level
-// is very cheap if the file handle is cached in table cache
-// (which is true if max_open_files is large).
-// Default: false
-func (self *Options) SetDisableSeekCompaction(value bool) {
-	C.rocksdb_options_set_disable_seek_compaction(self.c, C.int(btoi(value)))
+	cvalue := C.CString(value)
+	defer C.free(unsafe.Pointer(cvalue))
+	C.rocksdb_options_set_wal_dir(self.c, cvalue)
 }
 
 // The periodicity when obsolete files get deleted.
@@ -638,13 +566,6 @@ func (self *Options) SetRateLimitDelayMaxMilliseconds(value uint) {
 // Default: MAX_INT so that roll-over does not take place.
 func (self *Options) SetMaxManifestFileSize(value uint64) {
 	C.rocksdb_options_set_max_manifest_file_size(self.c, C.size_t(value))
-}
-
-// Disable block cache. If this is set to true, then no block cache
-// should be used.
-// Default: false
-func (self *Options) SetNoBlockCache(value bool) {
-	C.rocksdb_options_set_no_block_cache(self.c, boolToChar(value))
 }
 
 // Number of shards used for table cache.
@@ -753,16 +674,6 @@ func (self *Options) SetSkipLogErrorOnRecovery(value bool) {
 // Default: 3600 (1 hour)
 func (self *Options) SetStatsDumpPeriodSec(value uint) {
 	C.rocksdb_options_set_stats_dump_period_sec(self.c, C.uint(value))
-}
-
-// This is used to close a block before it reaches the configured
-// 'block_size'. If the percentage of free space in the current block is less
-// than this specified number and adding a new record to the block will
-// exceed the configured block size, then this block will be closed and the
-// new record will be written to the next block.
-// Default: 10
-func (self *Options) SetBlockSizeDeviation(value int) {
-	C.rocksdb_options_set_block_size_deviation(self.c, C.int(value))
 }
 
 // If set true, will hint the underlying file system that the file
@@ -994,8 +905,12 @@ func (self *Options) Destroy() {
 	self.cmp = nil
 	self.mo = nil
 	self.env = nil
-	self.cache = nil
-	self.fp = nil
 	self.st = nil
 	self.cf = nil
+	self.bbto = nil
+}
+
+func (self *Options) SetBlockBasedTableFactory(value *BlockBasedTableOptions) {
+	self.bbto = value
+	C.rocksdb_options_set_block_based_table_factory(self.c, value.c)
 }

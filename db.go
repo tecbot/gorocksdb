@@ -36,7 +36,9 @@ type DB struct {
 // OpenDb opens a database with the specified options.
 func OpenDb(opts *Options, name string) (*DB, error) {
 	var cErr *C.char
-	db := C.rocksdb_open(opts.c, stringToChar(name), &cErr)
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	db := C.rocksdb_open(opts.c, cname, &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 
@@ -53,7 +55,9 @@ func OpenDb(opts *Options, name string) (*DB, error) {
 // OpenDbForReadOnly opens a database with the specified options for readonly usage.
 func OpenDbForReadOnly(opts *Options, name string, errorIfLogFileExist bool) (*DB, error) {
 	var cErr *C.char
-	db := C.rocksdb_open_for_read_only(opts.c, stringToChar(name), boolToChar(errorIfLogFileExist), &cErr)
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	db := C.rocksdb_open_for_read_only(opts.c, cname, boolToChar(errorIfLogFileExist), &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 
@@ -165,7 +169,9 @@ func (self *DB) NewSnapshot() *Snapshot {
 
 // GetProperty returns the value of a database property.
 func (self *DB) GetProperty(propName string) string {
-	cValue := C.rocksdb_property_value(self.c, stringToChar(propName))
+	cprop := C.CString(propName)
+	defer C.free(unsafe.Pointer(cprop))
+	cValue := C.rocksdb_property_value(self.c, cprop)
 	defer C.free(unsafe.Pointer(cValue))
 
 	return C.GoString(cValue)
@@ -276,7 +282,9 @@ func (self *DB) EnableFileDeletions(force bool) error {
 // reflect that. Supports deletion of sst and log files only. 'name' must be
 // path relative to the db directory. eg. 000001.sst, /archive/000003.log.
 func (self *DB) DeleteFile(name string) {
-	C.rocksdb_delete_file(self.c, stringToChar(name))
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	C.rocksdb_delete_file(self.c, cname)
 }
 
 // Close closes the database.
@@ -288,7 +296,9 @@ func (self *DB) Close() {
 // filesystem.
 func DestroyDb(name string, opts *Options) error {
 	var cErr *C.char
-	C.rocksdb_destroy_db(opts.c, stringToChar(name), &cErr)
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	C.rocksdb_destroy_db(opts.c, cname, &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 
@@ -301,7 +311,9 @@ func DestroyDb(name string, opts *Options) error {
 // RepairDb repairs a database.
 func RepairDb(name string, opts *Options) error {
 	var cErr *C.char
-	C.rocksdb_repair_db(opts.c, stringToChar(name), &cErr)
+	cname := C.CString(name)
+	defer C.free(unsafe.Pointer(cname))
+	C.rocksdb_repair_db(opts.c, cname, &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 
