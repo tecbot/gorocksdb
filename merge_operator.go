@@ -53,9 +53,13 @@ type nativeMergeOperator struct {
 	c *C.rocksdb_mergeoperator_t
 }
 
-func (mo nativeMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) { return nil, false }
+func (mo nativeMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
+	return nil, false
+}
 
-func (mo nativeMergeOperator) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) { return nil, false }
+func (mo nativeMergeOperator) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) {
+	return nil, false
+}
 
 func (mo nativeMergeOperator) Name() string { return "" }
 

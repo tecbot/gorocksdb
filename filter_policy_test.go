@@ -2,9 +2,10 @@ package gorocksdb
 
 import (
 	"bytes"
-	. "github.com/smartystreets/goconvey/convey"
 	"os"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 type testFilterPolicy struct {
@@ -40,7 +41,9 @@ func TestNewFilterPolicy(t *testing.T) {
 			options := NewDefaultOptions()
 			DestroyDb(dbName, options)
 			options.SetCreateIfMissing(true)
-			options.SetFilterPolicy(policy)
+			boptions := NewDefaultBlockBasedTableOptions()
+			boptions.SetFilterPolicy(policy)
+			options.SetBlockBasedTableFactory(boptions)
 
 			db, err := OpenDb(options, dbName)
 			So(err, ShouldBeNil)
