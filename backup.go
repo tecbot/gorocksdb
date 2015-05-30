@@ -35,12 +35,12 @@ func (self *BackupEngineInfo) GetBackupId(index int) int64 {
 
 // GetSize get the size of the backup in bytes
 func (self *BackupEngineInfo) GetSize(index int) int64 {
-    return int64(C.rocksdb_backup_engine_info_count(C.int(self.c)))
+    return int64(C.rocksdb_backup_engine_info_size(self.c, C.int(index)))
 }
 
 // GetNumFiles gets the number of files in the backup @index
 func (self *BackupEngineInfo) GetNumFiles(index int) int32 {
-    return int32(C.rocksdb_backup_engine_info_count(C.int(self.c)))
+    return int32(C.rocksdb_backup_engine_info_number_files(self.c, C.int(index)))
 }
 
 // Destroy destroys the backup engine info instance
@@ -58,11 +58,11 @@ type RestoreOptions struct {
 // NewRestoreOptions creates a RestoreOptions instance
 func NewRestoreOptions() *RestoreOptions {
     return &RestoreOptions {
-        c: C.rocksdb_restore_options_create()
+        c: C.rocksdb_restore_options_create(),
     }
 }
 
-func (self *RestoreOptions) SetKeepLogFiles(int v) {
+func (self *RestoreOptions) SetKeepLogFiles(v int) {
     C.rocksdb_restore_options_set_keep_log_files(self.c, C.int(v))
 }
 
@@ -128,8 +128,8 @@ func (self *BackupEngine) RestoreDBFromLatestBackup(db_dir string, wal_dir strin
     c_db_dir := C.CString(db_dir)
     c_wal_dir := C.CString(wal_dir)
     defer func() {
-        C.free(unsafe.Pointer(c_db_dir)
-        C.free(unsafe.Pointer(c_wal_dir)
+        C.free(unsafe.Pointer(c_db_dir))
+        C.free(unsafe.Pointer(c_wal_dir))
     }()
 
     C.rocksdb_backup_engine_restore_db_from_latest_backup(self.c,
