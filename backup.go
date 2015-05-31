@@ -10,9 +10,9 @@ import (
     "unsafe"
 )
 
-/* BackupEngineInfo represents the information about the backups
-    in a backup engine instance. Use this get the state of the
-    backup like number of backups and their ids and timestamps etc */
+// BackupEngineInfo represents the information about the backups
+// in a backup engine instance. Use this get the state of the
+// backup like number of backups and their ids and timestamps etc
 type BackupEngineInfo struct {
     c *C.rocksdb_backup_engine_info_t
 }
@@ -62,6 +62,10 @@ func NewRestoreOptions() *RestoreOptions {
     }
 }
 
+// SetKeepLogFiles is used to set or unset the keep_log_files option
+// If true, restore won't overwrite the existing log files in wal_dir. It will
+// also move all log files from archive directory to wal_dir. By default, this
+// is false
 func (self *RestoreOptions) SetKeepLogFiles(v int) {
     C.rocksdb_restore_options_set_keep_log_files(self.c, C.int(v))
 }
