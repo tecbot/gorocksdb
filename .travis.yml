@@ -23,7 +23,7 @@ install:
   - sudo cp --preserve=links ./librocksdb.* /usr/lib/
   - sudo cp -r ./include/rocksdb/ /usr/include/
   - popd
-  - go get -t github.com/smartystreets/goconvey
+  - go get -t ./...
 
 script:
   - go test -v ./

@@ -888,6 +888,10 @@ func (self *Options) SetPlainTableFactory(keyLen uint32, bloomBitsPerKey int, ha
 	C.rocksdb_options_set_plain_table_factory(self.c, C.uint32_t(keyLen), C.int(bloomBitsPerKey), C.double(hashTableRatio), C.size_t(indexSparseness))
 }
 
+func (self *Options) SetCreateIfMissingColumnFamilies(value bool) {
+	C.rocksdb_options_set_create_missing_column_families(self.c, boolToChar(value))
+}
+
 // Destroy deallocates the Options object.
 func (self *Options) Destroy() {
 	C.rocksdb_options_destroy(self.c)
