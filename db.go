@@ -88,8 +88,26 @@ func (self *DB) Get(opts *ReadOptions, key []byte) (*Slice, error) {
 
 		return nil, errors.New(C.GoString(cErr))
 	}
-
 	return NewSlice(cValue, cValLen), nil
+}
+
+func (self *DB) GetBytes(opts *ReadOptions, key []byte) ([]byte, error) {
+	cKey := byteToChar(key)
+
+	var cErr *C.char
+	var cValLen C.size_t
+	cValue := C.rocksdb_get(self.c, opts.c, cKey, C.size_t(len(key)), &cValLen, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+
+	if cValue == nil {
+		return nil, nil
+	}
+
+	defer C.free(unsafe.Pointer(cValue))
+	return C.GoBytes(unsafe.Pointer(cValue), C.int(cValLen)), nil
 }
 
 // Put writes data associated with a key to the database.
