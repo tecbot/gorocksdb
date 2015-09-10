@@ -11,4 +11,6 @@ You'll need the shared library build of
 
 Now, if you build RocksDB you can install gorocksdb:
 
-    CGO_CFLAGS="-I/path/to/rocksdb/include" CGO_LDFLAGS="-L/path/to/rocksdb" go get github.com/tecbot/gorocksdb
+    CGO_CFLAGS="-I/path/to/rocksdb/include" \
+    CGO_LDFLAGS="-L/path/to/rocksdb -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy" \
+      go get github.com/tecbot/gorocksdb

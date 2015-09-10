@@ -1,6 +1,5 @@
 package gorocksdb
 
-// #cgo LDFLAGS: -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy
 // #include <stdlib.h>
 // #include "rocksdb/c.h"
 import "C"
