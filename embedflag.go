@@ -6,9 +6,9 @@ package gorocksdb
 // #cgo CPPFLAGS: -I${SRCDIR}/../../cockroachdb/c-lz4/internal/lib
 // #cgo CPPFLAGS: -I${SRCDIR}/../../cockroachdb/c-rocksdb/internal/include
 // #cgo CPPFLAGS: -I${SRCDIR}/../../cockroachdb/c-snappy/internal
-// #cgo LDFLAGS: -lstdc++ -lrt
+// #cgo LDFLAGS: -lstdc++
 // #cgo darwin LDFLAGS: -Wl,-undefined -Wl,dynamic_lookup
-// #cgo !darwin LDFLAGS: -Wl,-unresolved-symbols=ignore-all
+// #cgo !darwin LDFLAGS: -Wl,-unresolved-symbols=ignore-all -lrt
 import "C"
 
 import (
