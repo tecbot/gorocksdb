@@ -101,6 +101,11 @@ func OpenBackupEngine(opts *Options, path string) (*BackupEngine, error) {
 	}, nil
 }
 
+// UnsafeGetBackupEngine returns the underlying c backup engine
+func (self *BackupEngine) UnsafeGetBackupEngine() *C.rocksdb_backup_engine_t {
+	return self.c
+}
+
 // CreateNewBackup takes a new backup from @db
 func (self *BackupEngine) CreateNewBackup(db *DB) error {
 	var cErr *C.char

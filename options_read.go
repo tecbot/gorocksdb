@@ -34,6 +34,11 @@ func NewNativeReadOptions(c *C.rocksdb_readoptions_t) *ReadOptions {
 	return &ReadOptions{c}
 }
 
+// UnsafeGetReadOptions returns the underlying c read options object.
+func (self *ReadOptions) UnsafeGetReadOptions() *C.rocksdb_readoptions_t {
+	return self.c
+}
+
 // If true, all data read from underlying storage will be
 // verified against corresponding checksums.
 // Default: false

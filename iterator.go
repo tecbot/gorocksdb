@@ -32,8 +32,8 @@ type Iterator struct {
 }
 
 // NewNativeIterator creates a Iterator object.
-func NewNativeIterator(c *C.rocksdb_iterator_t) *Iterator {
-	return &Iterator{c}
+func NewNativeIterator(c unsafe.Pointer) *Iterator {
+	return &Iterator{(*C.rocksdb_iterator_t)(c)}
 }
 
 // Valid returns false only when an Iterator has iterated past either the
