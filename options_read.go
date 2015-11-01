@@ -2,6 +2,7 @@ package gorocksdb
 
 // #include "rocksdb/c.h"
 import "C"
+import "unsafe"
 
 // An application can issue a read request (via Get/Iterators) and specify
 // if that read should process data that ALREADY resides on a specified cache
@@ -32,6 +33,11 @@ func NewDefaultReadOptions() *ReadOptions {
 // NewNativeReadOptions creates a ReadOptions object.
 func NewNativeReadOptions(c *C.rocksdb_readoptions_t) *ReadOptions {
 	return &ReadOptions{c}
+}
+
+// UnsafeGetReadOptions returns the underlying c read options object.
+func (self *ReadOptions) UnsafeGetReadOptions() unsafe.Pointer {
+	return unsafe.Pointer(self.c)
 }
 
 // If true, all data read from underlying storage will be

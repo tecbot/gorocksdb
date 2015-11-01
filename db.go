@@ -212,6 +212,11 @@ func ListColumnFamilies(opts *Options, name string) ([]string, error) {
 	return names, nil
 }
 
+// UnsafeGetDB returns the underlying c rocksdb instance.
+func (self *DB) UnsafeGetDB() unsafe.Pointer {
+	return unsafe.Pointer(self.c)
+}
+
 // Name returns the name of the database.
 func (self *DB) Name() string {
 	return self.name
@@ -372,14 +377,14 @@ func (self *DB) Write(opts *WriteOptions, batch *WriteBatch) error {
 // ReadOptions given.
 func (self *DB) NewIterator(opts *ReadOptions) *Iterator {
 	cIter := C.rocksdb_create_iterator(self.c, opts.c)
-	return NewNativeIterator(cIter)
+	return NewNativeIterator(unsafe.Pointer(cIter))
 }
 
 // NewIteratorCF returns an Iterator over the the database and column family
 // that uses the ReadOptions given.
 func (self *DB) NewIteratorCF(opts *ReadOptions, cf *ColumnFamilyHandle) *Iterator {
 	cIter := C.rocksdb_create_iterator_cf(self.c, opts.c, cf.c)
-	return NewNativeIterator(cIter)
+	return NewNativeIterator(unsafe.Pointer(cIter))
 }
 
 // NewSnapshot creates a new snapshot of the database.
