@@ -18,6 +18,8 @@ const (
 	SnappyCompression = CompressionType(1)
 	ZlibCompression   = CompressionType(2)
 	BZip2Compression  = CompressionType(3)
+	LZ4Compression    = CompressionType(4)
+	LZ4HCCompression  = CompressionType(5)
 )
 
 type CompactionStyle uint
