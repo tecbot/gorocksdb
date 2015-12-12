@@ -116,3 +116,8 @@ func (self *Iterator) Close() {
 	C.rocksdb_iter_destroy(self.c)
 	self.c = nil
 }
+
+// UnsafeGetIterator returns the underlying c rocksdb iterator instance
+func (self *Iterator) UnsafeGetIterator() unsafe.Pointer {
+	return unsafe.Pointer(self.c)
+}
