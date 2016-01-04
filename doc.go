@@ -37,7 +37,7 @@ ReadOptions you use when creating the Iterator.
 		key.Free()
 		value.Free()
 	}
-	if err := it.GetError(); err != nil {
+	if err := it.Err(); err != nil {
 		...
 	}
 
