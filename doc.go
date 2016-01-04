@@ -31,8 +31,8 @@ ReadOptions you use when creating the Iterator.
 	defer it.Close()
 	it.Seek([]byte("foo"))
 	for it = it; it.Valid(); it.Next() {
-		key := iter.Key()
-		value := iter.Value()
+		key := it.Key()
+		value := it.Value()
 		fmt.Printf("Key: %v Value: %v\n", key.Data(), value.Data())
 		key.Free()
 		value.Free()
