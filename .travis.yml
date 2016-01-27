@@ -1,7 +1,5 @@
 language: go
 go:
-  - 1.2
-  - 1.5
   - release
   - tip
 
@@ -24,11 +22,11 @@ install:
   - sudo cp --preserve=links ./librocksdb.* /usr/lib/
   - sudo cp -r ./include/rocksdb/ /usr/include/
   - popd
-  - go get -t -tags dynamic ./...
+  - go get -t ./...
   - go version|grep go1.5 > /dev/null && go get -t -tags embed ./... || true
 
 script:
-  - go test -v -tags dynamic ./
+  - go test -v ./
   - go version|grep go1.5 > /dev/null && go test -v -tags embed ./ || true
 
 notifications:

@@ -1,62 +1,76 @@
 package gorocksdb
 
 import (
-	"bytes"
-	"os"
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/facebookgo/ensure"
 )
 
-type testFilterPolicy struct {
-	numKeys   int
-	initiated bool
+// fatalAsError is used as a wrapper to make it possible to use ensure
+// also if C calls Go otherwise it will throw a internal lockOSThread error.
+type fatalAsError struct {
+	t *testing.T
 }
 
-func (self *testFilterPolicy) CreateFilter(keys [][]byte) []byte {
-	filter := []byte{}
-	for _, key := range keys {
-		filter = append(filter, key...)
-		self.numKeys++
+func (f *fatalAsError) Fatal(a ...interface{}) {
+	f.t.Error(a...)
+}
+
+func TestFilterPolicy(t *testing.T) {
+	var (
+		givenKeys          = [][]byte{[]byte("key1"), []byte("key2"), []byte("key3")}
+		givenFilter        = []byte("key")
+		createFilterCalled = false
+		keyMayMatchCalled  = false
+	)
+	policy := &mockFilterPolicy{
+		createFilter: func(keys [][]byte) []byte {
+			createFilterCalled = true
+			ensure.DeepEqual(&fatalAsError{t}, keys, givenKeys)
+			return givenFilter
+		},
+		keyMayMatch: func(key, filter []byte) bool {
+			keyMayMatchCalled = true
+			ensure.DeepEqual(&fatalAsError{t}, key, givenKeys[0])
+			ensure.DeepEqual(&fatalAsError{t}, filter, givenFilter)
+			return true
+		},
 	}
 
-	return filter
-}
-
-func (self *testFilterPolicy) KeyMayMatch(key []byte, filter []byte) bool {
-	return bytes.Contains(filter, key)
-}
-
-func (self *testFilterPolicy) Name() string {
-	self.initiated = true
-	return "gorocksdb.test"
-}
-
-func TestNewFilterPolicy(t *testing.T) {
-	dbName := os.TempDir() + "/TestNewFilterPolicy"
-
-	Convey("Subject: Custom filter policy", t, func() {
-		Convey("When passed to the db as filter policy it should not panic", func() {
-			policy := &testFilterPolicy{}
-			options := NewDefaultOptions()
-			DestroyDb(dbName, options)
-			options.SetCreateIfMissing(true)
-			boptions := NewDefaultBlockBasedTableOptions()
-			boptions.SetFilterPolicy(policy)
-			options.SetBlockBasedTableFactory(boptions)
-
-			db, err := OpenDb(options, dbName)
-			So(err, ShouldBeNil)
-			So(policy.initiated, ShouldBeTrue)
-
-			Convey("When put 3 key to the db then the filter should receive 3 keys after a flush", func() {
-				wo := NewDefaultWriteOptions()
-				So(db.Put(wo, []byte("key1"), []byte("value1")), ShouldBeNil)
-				So(db.Put(wo, []byte("key2"), []byte("value2")), ShouldBeNil)
-				So(db.Put(wo, []byte("key3"), []byte("value3")), ShouldBeNil)
-				So(db.Flush(NewDefaultFlushOptions()), ShouldBeNil)
-				So(policy.numKeys, ShouldEqual, 3)
-			})
-		})
+	db := newTestDB(t, "TestFilterPolicy", func(opts *Options) {
+		blockOpts := NewDefaultBlockBasedTableOptions()
+		blockOpts.SetFilterPolicy(policy)
+		opts.SetBlockBasedTableFactory(blockOpts)
 	})
+	defer db.Close()
+
+	// insert keys
+	wo := NewDefaultWriteOptions()
+	for _, k := range givenKeys {
+		ensure.Nil(t, db.Put(wo, k, []byte("val")))
+	}
+
+	// flush to trigger the filter creation
+	ensure.Nil(t, db.Flush(NewDefaultFlushOptions()))
+	ensure.True(t, createFilterCalled)
+
+	// test key may match call
+	ro := NewDefaultReadOptions()
+	v1, err := db.Get(ro, givenKeys[0])
+	defer v1.Free()
+	ensure.Nil(t, err)
+	ensure.True(t, keyMayMatchCalled)
+}
+
+type mockFilterPolicy struct {
+	createFilter func(keys [][]byte) []byte
+	keyMayMatch  func(key, filter []byte) bool
+}
+
+func (m *mockFilterPolicy) Name() string { return "gorocksdb.test" }
+func (m *mockFilterPolicy) CreateFilter(keys [][]byte) []byte {
+	return m.createFilter(keys)
+}
+func (m *mockFilterPolicy) KeyMayMatch(key, filter []byte) bool {
+	return m.keyMayMatch(key, filter)
 }

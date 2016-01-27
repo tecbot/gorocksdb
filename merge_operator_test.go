@@ -1,89 +1,54 @@
 package gorocksdb
 
 import (
-	"os"
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/facebookgo/ensure"
 )
 
-type testMergeOperator struct {
-	initiated bool
-}
-
-func (self *testMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
-	for _, operand := range operands {
-		existingValue = append(existingValue, operand...)
+func TestMergeOperator(t *testing.T) {
+	var (
+		givenKey    = []byte("hello")
+		givenVal1   = []byte("foo")
+		givenVal2   = []byte("bar")
+		givenMerged = []byte("foobar")
+	)
+	merger := &mockMergeOperator{
+		fullMerge: func(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
+			ensure.DeepEqual(&fatalAsError{t}, key, givenKey)
+			ensure.DeepEqual(&fatalAsError{t}, existingValue, givenVal1)
+			ensure.DeepEqual(&fatalAsError{t}, operands, [][]byte{givenVal2})
+			return givenMerged, true
+		},
 	}
-
-	return existingValue, true
-}
-
-func (self *testMergeOperator) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) {
-	return append(leftOperand, rightOperand...), true
-}
-
-func (self *testMergeOperator) Name() string {
-	self.initiated = true
-	return "gorocksdb.test"
-}
-
-func TestNewMergeOperator(t *testing.T) {
-	dbName := os.TempDir() + "/TestNewMergeOperator"
-
-	Convey("Subject: Custom merge operator", t, func() {
-		Convey("When passed to the db as merge operator then it should not panic", func() {
-			merger := &testMergeOperator{}
-			options := NewDefaultOptions()
-			DestroyDb(dbName, options)
-			options.SetCreateIfMissing(true)
-			options.SetMergeOperator(merger)
-			options.SetMaxSuccessiveMerges(5)
-
-			db, err := OpenDb(options, dbName)
-			So(err, ShouldBeNil)
-			So(merger.initiated, ShouldBeTrue)
-
-			Convey("When merge the value 'foo' with 'bar' then the new value should be 'foobar'", func() {
-				wo := NewDefaultWriteOptions()
-				So(db.Put(wo, []byte("foo"), []byte("foo")), ShouldBeNil)
-				So(db.Merge(wo, []byte("foo"), []byte("bar")), ShouldBeNil)
-
-				value, err := db.Get(NewDefaultReadOptions(), []byte("foo"))
-				So(err, ShouldBeNil)
-				So(value.Data(), ShouldResemble, []byte("foobar"))
-				value.Free()
-			})
-		})
+	db := newTestDB(t, "TestMergeOperator", func(opts *Options) {
+		opts.SetMergeOperator(merger)
 	})
+	defer db.Close()
+
+	wo := NewDefaultWriteOptions()
+	ensure.Nil(t, db.Put(wo, givenKey, givenVal1))
+	ensure.Nil(t, db.Merge(wo, givenKey, givenVal2))
+    
+    // trigger a compaction to ensure that a merge is performed
+	db.CompactRange(Range{nil, nil})
+
+	ro := NewDefaultReadOptions()
+	v1, err := db.Get(ro, givenKey)
+	defer v1.Free()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, v1.Data(), givenMerged)
 }
 
-func TestMergeOperatorNonExisitingValue(t *testing.T) {
-	dbName := os.TempDir() + "/TestMergeOperatorNonExisitingValue"
+type mockMergeOperator struct {
+	fullMerge    func(key, existingValue []byte, operands [][]byte) ([]byte, bool)
+	partialMerge func(key, leftOperand, rightOperand []byte) ([]byte, bool)
+}
 
-	Convey("Subject: Merge of a non-existing value", t, func() {
-		merger := &testMergeOperator{}
-
-		options := NewDefaultOptions()
-		DestroyDb(dbName, options)
-		options.SetCreateIfMissing(true)
-		options.SetMergeOperator(merger)
-		options.SetMaxSuccessiveMerges(5)
-
-		db, err := OpenDb(options, dbName)
-		So(err, ShouldBeNil)
-		So(merger.initiated, ShouldBeTrue)
-
-		Convey("When merge a non-existing value with 'bar' then the new value should be 'bar'", func() {
-			wo := NewDefaultWriteOptions()
-			So(db.Merge(wo, []byte("notexists"), []byte("bar")), ShouldBeNil)
-
-			Convey("Then the new value should be 'bar'", func() {
-				value, err := db.Get(NewDefaultReadOptions(), []byte("notexists"))
-				So(err, ShouldBeNil)
-				So(value.Data(), ShouldResemble, []byte("bar"))
-				value.Free()
-			})
-		})
-	})
+func (m *mockMergeOperator) Name() string { return "gorocksdb.test" }
+func (m *mockMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
+	return m.fullMerge(key, existingValue, operands)
+}
+func (m *mockMergeOperator) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) {
+	return m.partialMerge(key, leftOperand, rightOperand)
 }

@@ -1,35 +1,63 @@
 package gorocksdb
 
 import (
-	"os"
+	"io/ioutil"
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/facebookgo/ensure"
 )
 
-func TestDB(t *testing.T) {
-	dbName := os.TempDir() + "/TestDB"
+func TestOpenDb(t *testing.T) {
+	db := newTestDB(t, "TestOpenDb", nil)
+	defer db.Close()
+}
 
-	Convey("Subject: DB", t, func() {
-		options := NewDefaultOptions()
-		DestroyDb(dbName, options)
-		options.SetCreateIfMissing(true)
+func TestDBCRUD(t *testing.T) {
+	db := newTestDB(t, "TestDBGet", nil)
+	defer db.Close()
 
-		db, err := OpenDb(options, dbName)
-		So(err, ShouldBeNil)
+	var (
+		givenKey  = []byte("hello")
+		givenVal1 = []byte("world1")
+		givenVal2 = []byte("world2")
+		wo        = NewDefaultWriteOptions()
+		ro        = NewDefaultReadOptions()
+	)
 
-		Convey("When get bytes, it should return nil or byte slices", func() {
-			wo := NewDefaultWriteOptions()
-			So(db.Put(wo, []byte("key1"), []byte("value1")), ShouldBeNil)
+	// create
+	ensure.Nil(t, db.Put(wo, givenKey, givenVal1))
 
-			ro := NewDefaultReadOptions()
-			value, err := db.GetBytes(ro, []byte("key1"))
-			So(err, ShouldBeNil)
-			So(string(value), ShouldEqual, "value1")
+	// retrieve
+	v1, err := db.Get(ro, givenKey)
+	defer v1.Free()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, v1.Data(), givenVal1)
 
-			value, err = db.GetBytes(ro, []byte("key2"))
-			So(err, ShouldBeNil)
-			So(value, ShouldEqual, nil)
-		})
-	})
+	// update
+	ensure.Nil(t, db.Put(wo, givenKey, givenVal2))
+	v2, err := db.Get(ro, givenKey)
+	defer v2.Free()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, v2.Data(), givenVal2)
+
+	// delete
+	ensure.Nil(t, db.Delete(wo, givenKey))
+	v3, err := db.Get(ro, givenKey)
+	ensure.Nil(t, err)
+	ensure.True(t, v3.Data() == nil)
+}
+
+func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
+	dir, err := ioutil.TempDir("", "gorocksdb-"+name)
+	ensure.Nil(t, err)
+
+	opts := NewDefaultOptions()
+	opts.SetCreateIfMissing(true)
+	if applyOpts != nil {
+		applyOpts(opts)
+	}
+	db, err := OpenDb(opts, dir)
+	ensure.Nil(t, err)
+
+	return db
 }
