@@ -1,95 +1,75 @@
 package gorocksdb
 
 import (
-	"os"
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/facebookgo/ensure"
 )
 
 func TestWriteBatch(t *testing.T) {
-	dbName := os.TempDir() + "/TestNewWriteBatch"
+	db := newTestDB(t, "TestWriteBatch", nil)
+	defer db.Close()
 
-	Convey("Subject: Batching of db operations using a write batch", t, func() {
-		options, ro, wo := NewDefaultOptions(), NewDefaultReadOptions(), NewDefaultWriteOptions()
-		DestroyDb(dbName, options)
-		options.SetCreateIfMissing(true)
-		db, err := OpenDb(options, dbName)
-		So(err, ShouldBeNil)
-		defer db.Close()
+	var (
+		givenKey1 = []byte("key1")
+		givenVal1 = []byte("val1")
+		givenKey2 = []byte("key2")
+	)
+	wo := NewDefaultWriteOptions()
+	ensure.Nil(t, db.Put(wo, givenKey2, []byte("foo")))
 
-		err = db.Put(wo, []byte("key3"), []byte("value3"))
-		So(err, ShouldBeNil)
+	// create and fill the write batch
+	wb := NewWriteBatch()
+	defer wb.Destroy()
+	wb.Put(givenKey1, givenVal1)
+	wb.Delete(givenKey2)
+	ensure.DeepEqual(t, wb.Count(), 2)
 
-		wb := NewWriteBatch()
-		defer wb.Destroy()
+	// perform the batch
+	ensure.Nil(t, db.Write(wo, wb))
 
-		wb.Put([]byte("key1"), []byte("value1"))
-		wb.Put([]byte("key2"), []byte("value2"))
-		wb.Delete([]byte("key3"))
-		So(wb.Count(), ShouldEqual, 3)
+	// check changes
+	ro := NewDefaultReadOptions()
+	v1, err := db.Get(ro, givenKey1)
+	defer v1.Free()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, v1.Data(), givenVal1)
 
-		err = db.Write(wo, wb)
-		So(err, ShouldBeNil)
-
-		value, err := db.Get(ro, []byte("key1"))
-		So(err, ShouldBeNil)
-		So(value.Data(), ShouldResemble, []byte("value1"))
-		value.Free()
-
-		value, err = db.Get(ro, []byte("key2"))
-		So(err, ShouldBeNil)
-		So(value.Data(), ShouldResemble, []byte("value2"))
-		value.Free()
-
-		value, err = db.Get(ro, []byte("key3"))
-		So(err, ShouldBeNil)
-		So(value.Size(), ShouldEqual, 0)
-		value.Free()
-	})
+	v2, err := db.Get(ro, givenKey2)
+	defer v2.Free()
+	ensure.Nil(t, err)
+	ensure.True(t, v2.Data() == nil)
 }
 
 func TestWriteBatchIterator(t *testing.T) {
-	dbName := os.TempDir() + "/TestWriteBatchIterator"
+	db := newTestDB(t, "TestWriteBatchIterator", nil)
+	defer db.Close()
 
-	Convey("Subject: Iterate over a write batch", t, func() {
-		options := NewDefaultOptions()
-		DestroyDb(dbName, options)
-		options.SetCreateIfMissing(true)
-		db, err := OpenDb(options, dbName)
-		So(err, ShouldBeNil)
-		defer db.Close()
+	var (
+		givenKey1 = []byte("key1")
+		givenVal1 = []byte("val1")
+		givenKey2 = []byte("key2")
+	)
+	// create and fill the write batch
+	wb := NewWriteBatch()
+	defer wb.Destroy()
+	wb.Put(givenKey1, givenVal1)
+	wb.Delete(givenKey2)
+	ensure.DeepEqual(t, wb.Count(), 2)
 
-		wb := NewWriteBatch()
-		defer wb.Destroy()
+	// iterate over the batch
+	iter := wb.NewIterator()
+	ensure.True(t, iter.Next())
+	record := iter.Record()
+	ensure.DeepEqual(t, record.Type, WriteBatchRecordTypeValue)
+	ensure.DeepEqual(t, record.Key, givenKey1)
+	ensure.DeepEqual(t, record.Value, givenVal1)
 
-		wb.Put([]byte("key1"), []byte("value1"))
-		wb.Put([]byte("key2"), []byte("value2"))
-		wb.Delete([]byte("key3"))
-		So(wb.Count(), ShouldEqual, 3)
+	ensure.True(t, iter.Next())
+	record = iter.Record()
+	ensure.DeepEqual(t, record.Type, WriteBatchRecordTypeDeletion)
+	ensure.DeepEqual(t, record.Key, givenKey2)
 
-		iter := wb.NewIterator()
-		So(iter.Next(), ShouldBeTrue)
-
-		record := iter.Record()
-		So(record, ShouldNotBeNil)
-		So(record.Key, ShouldResemble, []byte("key1"))
-		So(record.Value, ShouldResemble, []byte("value1"))
-		So(record.Type, ShouldEqual, WriteBatchRecordTypeValue)
-
-		So(iter.Next(), ShouldBeTrue)
-		record = iter.Record()
-		So(record, ShouldNotBeNil)
-		So(record.Key, ShouldResemble, []byte("key2"))
-		So(record.Value, ShouldResemble, []byte("value2"))
-		So(record.Type, ShouldEqual, WriteBatchRecordTypeValue)
-
-		So(iter.Next(), ShouldBeTrue)
-		record = iter.Record()
-		So(record, ShouldNotBeNil)
-		So(record.Key, ShouldResemble, []byte("key3"))
-		So(record.Type, ShouldEqual, WriteBatchRecordTypeDeletion)
-
-		So(iter.Next(), ShouldBeFalse)
-	})
+	// there shouldn't be any left
+	ensure.False(t, iter.Next())
 }

@@ -2,50 +2,46 @@ package gorocksdb
 
 import (
 	"bytes"
-	"os"
 	"testing"
 
-	. "github.com/smartystreets/goconvey/convey"
+	"github.com/facebookgo/ensure"
 )
 
-type testComparator struct {
-	numCompared int
-	initiated   bool
-}
-
-func (self *testComparator) Compare(a, b []byte) int {
-	self.numCompared++
-
-	return bytes.Compare(a, b)
-}
-
-func (self *testComparator) Name() string {
-	self.initiated = true
-	return "gorocksdb.test"
-}
-
-func TestNewComparator(t *testing.T) {
-	dbName := os.TempDir() + "/TestNewComparator"
-
-	Convey("Subject: Custom comparator", t, func() {
-		Convey("When passed to the db as comperator then it should not panic", func() {
-			cmp := &testComparator{}
-			options := NewDefaultOptions()
-			DestroyDb(dbName, options)
-			options.SetCreateIfMissing(true)
-			options.SetComparator(cmp)
-
-			db, err := OpenDb(options, dbName)
-			So(err, ShouldBeNil)
-			So(cmp.initiated, ShouldBeTrue)
-
-			Convey("When put 3 values into the db then the comperator should be called two times", func() {
-				wo := NewDefaultWriteOptions()
-				So(db.Put(wo, []byte("key1"), []byte("value1")), ShouldBeNil)
-				So(db.Put(wo, []byte("key2"), []byte("value2")), ShouldBeNil)
-				So(db.Put(wo, []byte("key3"), []byte("value3")), ShouldBeNil)
-				So(cmp.numCompared, ShouldEqual, 2)
-			})
-		})
+func TestComparator(t *testing.T) {
+	db := newTestDB(t, "TestComparator", func(opts *Options) {
+		opts.SetComparator(&bytesReverseComparator{})
 	})
+	defer db.Close()
+
+	// insert keys
+	givenKeys := [][]byte{[]byte("key1"), []byte("key2"), []byte("key3")}
+	wo := NewDefaultWriteOptions()
+	for _, k := range givenKeys {
+		ensure.Nil(t, db.Put(wo, k, []byte("val")))
+	}
+
+	// create a iterator to collect the keys
+	ro := NewDefaultReadOptions()
+	iter := db.NewIterator(ro)
+	defer iter.Close()
+
+	// we seek to the last key and iterate in reverse order
+	// to match given keys
+	var actualKeys [][]byte
+	for iter.SeekToLast(); iter.Valid(); iter.Prev() {
+		key := make([]byte, 4)
+		copy(key, iter.Key().Data())
+		actualKeys = append(actualKeys, key)
+	}
+	ensure.Nil(t, iter.Err())
+
+	// ensure that the order is correct
+	ensure.DeepEqual(t, actualKeys, givenKeys)
+}
+
+type bytesReverseComparator struct{}
+
+func (cmp *bytesReverseComparator) Name() string { return "gorocksdb.bytes-reverse" }
+func (cmp *bytesReverseComparator) Compare(a, b []byte) int {
+	return bytes.Compare(a, b) * -1
 }
