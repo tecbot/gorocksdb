@@ -3,10 +3,8 @@ package gorocksdb
 // #include "rocksdb/c.h"
 import "C"
 
+// A CompactionFilter can be used to filter keys during compaction time.
 type CompactionFilter interface {
-	// The name of the compaction filter, for logging
-	Name() string
-
 	// If the Filter function returns false, it indicates
 	// that the kv should be preserved, while a return value of true
 	// indicates that this key-value should be removed from the
@@ -22,6 +20,9 @@ type CompactionFilter interface {
 	// called from different threads concurrently. The application must ensure
 	// that the call is thread-safe.
 	Filter(level int, key, val []byte) (remove bool, newVal []byte)
+
+	// The name of the compaction filter, for logging
+	Name() string
 }
 
 //export gorocksdb_compactionfilter_filter
@@ -29,7 +30,6 @@ func gorocksdb_compactionfilter_filter(handle *CompactionFilter, cLevel C.int, c
 	key := charToByte(cKey, cKeyLen)
 	val := charToByte(cVal, cValLen)
 	remove, newVal := (*handle).Filter(int(cLevel), key, val)
-
 	if remove {
 		return C.int(1)
 	} else if newVal != nil {

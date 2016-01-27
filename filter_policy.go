@@ -33,7 +33,7 @@ func (fp nativeFilterPolicy) KeyMayMatch(key []byte, filter []byte) bool { retur
 
 func (fp nativeFilterPolicy) Name() string { return "" }
 
-// Return a new filter policy that uses a bloom filter with approximately
+// NewBloomFilter returns a new filter policy that uses a bloom filter with approximately
 // the specified number of bits per key.  A good value for bits_per_key
 // is 10, which yields a filter with ~1% false positive rate.
 //
@@ -65,7 +65,6 @@ func gorocksdb_filterpolicy_create_filter(handler *FilterPolicy, cKeys **C.char,
 	}
 
 	dst := (*handler).CreateFilter(keys)
-
 	*cDstLen = C.size_t(len(dst))
 
 	return byteToChar(dst)
@@ -75,10 +74,7 @@ func gorocksdb_filterpolicy_create_filter(handler *FilterPolicy, cKeys **C.char,
 func gorocksdb_filterpolicy_key_may_match(handler *FilterPolicy, cKey *C.char, cKeyLen C.size_t, cFilter *C.char, cFilterLen C.size_t) C.uchar {
 	key := charToByte(cKey, cKeyLen)
 	filter := charToByte(cFilter, cFilterLen)
-
-	match := (*handler).KeyMayMatch(key, filter)
-
-	return boolToChar(match)
+	return boolToChar((*handler).KeyMayMatch(key, filter))
 }
 
 //export gorocksdb_filterpolicy_name

@@ -47,29 +47,22 @@ func NewNativeSliceTransform(c *C.rocksdb_slicetransform_t) SliceTransform {
 //export gorocksdb_slicetransform_transform
 func gorocksdb_slicetransform_transform(handler *SliceTransform, cKey *C.char, cKeyLen C.size_t, cDstLen *C.size_t) *C.char {
 	key := charToByte(cKey, cKeyLen)
-
 	dst := (*handler).Transform(key)
-
 	*cDstLen = C.size_t(len(dst))
-
 	return byteToChar(dst)
 }
 
 //export gorocksdb_slicetransform_in_domain
 func gorocksdb_slicetransform_in_domain(handler *SliceTransform, cKey *C.char, cKeyLen C.size_t) C.uchar {
 	key := charToByte(cKey, cKeyLen)
-
 	inDomain := (*handler).InDomain(key)
-
 	return boolToChar(inDomain)
 }
 
 //export gorocksdb_slicetransform_in_range
 func gorocksdb_slicetransform_in_range(handler *SliceTransform, cKey *C.char, cKeyLen C.size_t) C.uchar {
 	key := charToByte(cKey, cKeyLen)
-
 	inRange := (*handler).InRange(key)
-
 	return boolToChar(inRange)
 }
 
