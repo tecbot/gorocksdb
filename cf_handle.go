@@ -5,6 +5,7 @@ package gorocksdb
 import "C"
 import "unsafe"
 
+// ColumnFamilyHandle represents a handle to a ColumnFamily.
 type ColumnFamilyHandle struct {
 	c *C.rocksdb_column_family_handle_t
 }

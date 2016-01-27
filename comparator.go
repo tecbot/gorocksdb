@@ -16,6 +16,8 @@ type Comparator interface {
 	Name() string
 }
 
+// This type is a bit of a hack and will not behave as expected if clients try to
+// call its methods. It is handled specially in Options.
 type nativeComparator struct {
 	c *C.rocksdb_comparator_t
 }
@@ -35,10 +37,7 @@ func NewNativeComparator(c *C.rocksdb_comparator_t) Comparator {
 func gorocksdb_comparator_compare(handler *Comparator, cKeyA *C.char, cKeyALen C.size_t, cKeyB *C.char, cKeyBLen C.size_t) C.int {
 	keyA := charToByte(cKeyA, cKeyALen)
 	keyB := charToByte(cKeyB, cKeyBLen)
-
-	compare := (*handler).Compare(keyA, keyB)
-
-	return C.int(compare)
+	return C.int((*handler).Compare(keyA, keyB))
 }
 
 //export gorocksdb_comparator_name

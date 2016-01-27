@@ -3,9 +3,7 @@ package gorocksdb
 // #include "rocksdb/c.h"
 import "C"
 
-// The Merge Operator
-//
-// Essentially, a MergeOperator specifies the SEMANTICS of a merge, which only
+// A MergeOperator specifies the SEMANTICS of a merge, which only
 // client knows. It could be numeric addition, list append, string
 // concatenation, edit data structure, ... , anything.
 // The library, on the other hand, is concerned with the exercise of this
