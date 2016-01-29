@@ -22,7 +22,7 @@ rocksdb_compactionfilter_t* gorocksdb_compactionfilter_create(void* state) {
         state,
         gorocksdb_destruct_handler,
         (unsigned char (*)(void*, int, const char*, size_t, const char*, size_t, char**, size_t*, unsigned char*))(gorocksdb_compactionfilter_filter),
-        (const char *(*)(void*))(gorocksdb_comparator_name));
+        (const char *(*)(void*))(gorocksdb_compactionfilter_name));
 }
 
 /* Filter Policy */
