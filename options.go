@@ -58,11 +58,7 @@ type Options struct {
 	c *C.rocksdb_options_t
 
 	// Hold references for GC.
-	cmp  *Comparator
-	mo   *MergeOperator
 	env  *Env
-	st   *SliceTransform
-	cf   *CompactionFilter
 	bbto *BlockBasedTableOptions
 
 	// We keep these so we can free their memory in Destroy.
@@ -88,10 +84,13 @@ func NewNativeOptions(c *C.rocksdb_options_t) *Options {
 // SetCompactionFilter sets the specified compaction filter
 // which will be applied on compactions.
 // Default: nil
-func (opts *Options) SetCompactionFilter(filter CompactionFilter) {
-	h := unsafe.Pointer(&filter)
-	opts.cf = &filter
-	opts.ccf = C.gorocksdb_compactionfilter_create(h)
+func (opts *Options) SetCompactionFilter(value CompactionFilter) {
+	if nc, ok := value.(nativeCompactionFilter); ok {
+		opts.ccf = nc.c
+	} else {
+		idx := registerCompactionFilter(value)
+		opts.ccf = C.gorocksdb_compactionfilter_create(C.uintptr_t(idx))
+	}
 	C.rocksdb_options_set_compaction_filter(opts.c, opts.ccf)
 }
 
@@ -101,9 +100,8 @@ func (opts *Options) SetComparator(value Comparator) {
 	if nc, ok := value.(nativeComparator); ok {
 		opts.ccmp = nc.c
 	} else {
-		h := unsafe.Pointer(&value)
-		opts.cmp = &value
-		opts.ccmp = C.gorocksdb_comparator_create(h)
+		idx := registerComperator(value)
+		opts.ccmp = C.gorocksdb_comparator_create(C.uintptr_t(idx))
 	}
 	C.rocksdb_options_set_comparator(opts.c, opts.ccmp)
 }
@@ -115,9 +113,8 @@ func (opts *Options) SetMergeOperator(value MergeOperator) {
 	if nmo, ok := value.(nativeMergeOperator); ok {
 		opts.cmo = nmo.c
 	} else {
-		h := unsafe.Pointer(&value)
-		opts.mo = &value
-		opts.cmo = C.gorocksdb_mergeoperator_create(h)
+		idx := registerMergeOperator(value)
+		opts.cmo = C.gorocksdb_mergeoperator_create(C.uintptr_t(idx))
 	}
 	C.rocksdb_options_set_merge_operator(opts.c, opts.cmo)
 }
@@ -343,9 +340,8 @@ func (opts *Options) SetPrefixExtractor(value SliceTransform) {
 	if nst, ok := value.(nativeSliceTransform); ok {
 		opts.cst = nst.c
 	} else {
-		h := unsafe.Pointer(&value)
-		opts.st = &value
-		opts.cst = C.gorocksdb_slicetransform_create(h)
+		idx := registerSliceTransform(value)
+		opts.cst = C.gorocksdb_slicetransform_create(C.uintptr_t(idx))
 	}
 	C.rocksdb_options_set_prefix_extractor(opts.c, opts.cst)
 }
@@ -817,7 +813,7 @@ func (opts *Options) SetVerifyChecksumsInCompaction(value bool) {
 }
 
 // SetFilterDeletes enable/disable filtering of deleted keys.
-// 
+//
 // Use KeyMayExist API to filter deletes when this is true.
 // If KeyMayExist returns false, i.e. the key definitely does not exist, then
 // the delete is a noop. KeyMayExist only incurs in-memory look up.
@@ -829,7 +825,7 @@ func (opts *Options) SetFilterDeletes(value bool) {
 
 // SetMaxSequentialSkipInIterations specifies whether an iteration->Next()
 // sequentially skips over keys with the same user-key or not.
-// 
+//
 // This number specifies the number of keys (with the same userkey)
 // that will be sequentially skipped before a reseek is issued.
 // Default: 8
@@ -838,7 +834,7 @@ func (opts *Options) SetMaxSequentialSkipInIterations(value uint64) {
 }
 
 // SetInplaceUpdateSupport enable/disable thread-safe inplace updates.
-// 
+//
 // Requires updates if
 // * key exists in current memtable
 // * new sizeof(new_value) <= sizeof(old_value)
@@ -855,7 +851,7 @@ func (opts *Options) SetInplaceUpdateNumLocks(value int) {
 }
 
 // SetMemtablePrefixBloomBits sets the bloom bits for prefix extractor.
-// 
+//
 // If prefix_extractor is set and bloom_bits is not 0, create prefix bloom
 // for memtable.
 // Default: 0
@@ -870,7 +866,7 @@ func (opts *Options) SetMemtablePrefixBloomProbes(value uint32) {
 }
 
 // SetBloomLocality sets the bloom locality.
-// 
+//
 // Control locality of bloom filter probes to improve cache miss rate.
 // This option only applies to memtable prefix bloom and plaintable
 // prefix bloom. It essentially limits the max number of cache lines each
@@ -1001,10 +997,6 @@ func (opts *Options) Destroy() {
 		C.rocksdb_compactionfilter_destroy(opts.ccf)
 	}
 	opts.c = nil
-	opts.cmp = nil
-	opts.mo = nil
 	opts.env = nil
-	opts.st = nil
-	opts.cf = nil
 	opts.bbto = nil
 }

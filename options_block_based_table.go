@@ -3,7 +3,6 @@ package gorocksdb
 // #include "rocksdb/c.h"
 // #include "gorocksdb.h"
 import "C"
-import "unsafe"
 
 // BlockBasedTableOptions represents block-based table options.
 type BlockBasedTableOptions struct {
@@ -12,7 +11,6 @@ type BlockBasedTableOptions struct {
 	// Hold references for GC.
 	cache     *Cache
 	compCache *Cache
-	fp        *FilterPolicy
 
 	// We keep these so we can free their memory in Destroy.
 	cFp *C.rocksdb_filterpolicy_t
@@ -32,7 +30,6 @@ func NewNativeBlockBasedTableOptions(c *C.rocksdb_block_based_table_options_t) *
 func (opts *BlockBasedTableOptions) Destroy() {
 	C.rocksdb_block_based_options_destroy(opts.c)
 	opts.c = nil
-	opts.fp = nil
 	opts.cache = nil
 	opts.compCache = nil
 }
@@ -74,8 +71,8 @@ func (opts *BlockBasedTableOptions) SetFilterPolicy(fp FilterPolicy) {
 	if nfp, ok := fp.(nativeFilterPolicy); ok {
 		opts.cFp = nfp.c
 	} else {
-		opts.fp = &fp
-		opts.cFp = C.gorocksdb_filterpolicy_create(unsafe.Pointer(&fp))
+		idx := registerFilterPolicy(fp)
+		opts.cFp = C.gorocksdb_filterpolicy_create(C.uintptr_t(idx))
 	}
 	C.rocksdb_block_based_options_set_filter_policy(opts.c, opts.cFp)
 }
