@@ -226,6 +226,9 @@ func (db *DB) Get(opts *ReadOptions, key []byte) (*Slice, error) {
 		defer C.free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
 	}
+	if cValue == nil {
+		return nil, nil
+	}
 	return NewSlice(cValue, cValLen), nil
 }
 
@@ -259,6 +262,9 @@ func (db *DB) GetCF(opts *ReadOptions, cf *ColumnFamilyHandle, key []byte) (*Sli
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
+	}
+	if cValue == nil {
+		return nil, nil
 	}
 	return NewSlice(cValue, cValLen), nil
 }
