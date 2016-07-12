@@ -3,8 +3,10 @@ Package gorocksdb provides the ability to create and access RocksDB databases.
 
 gorocksdb.OpenDb opens and creates databases.
 
+	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
+	bbto.SetBlockCache(gorocksdb.NewLRUCache(3 << 30))
 	opts := gorocksdb.NewDefaultOptions()
-	opts.SetBlockCache(gorocksdb.NewLRUCache(3<<30))
+	opts.SetBlockBasedTableFactory(bbto)
 	opts.SetCreateIfMissing(true)
 	db, err := gorocksdb.OpenDb(opts, "/path/to/db")
 
@@ -57,7 +59,9 @@ you want. NewBloomFilter is amount of bits in the filter to use per key in
 your database.
 
 	filter := gorocksdb.NewBloomFilter(10)
-	opts.SetFilterPolicy(filter)
+	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
+	bbto.SetFilterPolicy(filter)
+	opts.SetBlockBasedTableFactory(bbto)
 	db, err := gorocksdb.OpenDb(opts, "/path/to/db")
 
 If you're using a custom comparator in your code, be aware you may have to
