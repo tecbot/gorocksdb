@@ -54,9 +54,9 @@ DB.Write.
 	err := db.Write(wo, wb)
 
 If your working dataset does not fit in memory, you'll want to add a bloom
-filter to your database. NewBloomFilter and Options.SetFilterPolicy is what
-you want. NewBloomFilter is amount of bits in the filter to use per key in
-your database.
+filter to your database. NewBloomFilter and
+BlockBasedTableOptions.SetFilterPolicy is what you want. NewBloomFilter is
+amount of bits in the filter to use per key in your database.
 
 	filter := gorocksdb.NewBloomFilter(10)
 	bbto := gorocksdb.NewDefaultBlockBasedTableOptions()
