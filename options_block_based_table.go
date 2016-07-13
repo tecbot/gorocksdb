@@ -83,7 +83,7 @@ func (opts *BlockBasedTableOptions) SetNoBlockCache(value bool) {
 	C.rocksdb_block_based_options_set_no_block_cache(opts.c, boolToChar(value))
 }
 
-// SetBlockCache sets the control over blocks (user data is soptsred in a set of blocks, and
+// SetBlockCache sets the control over blocks (user data is stored in a set of blocks, and
 // a block is the unit of reading from disk).
 //
 // If set, use the specified cache for blocks.
