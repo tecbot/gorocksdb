@@ -325,7 +325,7 @@ func (opts *Options) SetMinLevelToCompress(value int) {
 // SetCompressionOptions sets different options for compression algorithms.
 // Default: nil
 func (opts *Options) SetCompressionOptions(value *CompressionOptions) {
-	C.rocksdb_options_set_compression_options(opts.c, C.int(value.WindowBits), C.int(value.Level), C.int(value.Strategy))
+	C.rocksdb_options_set_compression_options(opts.c, C.int(value.WindowBits), C.int(value.Level), C.int(value.Strategy), C.int(value.MaxDictBytes))
 }
 
 // SetPrefixExtractor sets the prefic extractor.
