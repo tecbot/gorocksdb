@@ -18,6 +18,8 @@ const (
 	SnappyCompression = CompressionType(C.rocksdb_snappy_compression)
 	ZLibCompression   = CompressionType(C.rocksdb_zlib_compression)
 	Bz2Compression    = CompressionType(C.rocksdb_bz2_compression)
+	Lz4Compression    = CompressionType(C.rocksdb_lz4_compression)
+	Lz4hcCompression    = CompressionType(C.rocksdb_lz4hc_compression)
 )
 
 // CompactionStyle specifies the compaction style.
@@ -456,9 +458,6 @@ func (opts *Options) SetMaxBytesForLevelMultiplierAdditional(value []int) {
 // if it would make the total compaction cover more than
 // (expanded_compaction_factor * targetFileSizeLevel()) many bytes.
 // Default: 25
-func (opts *Options) SetExpandedCompactionFactor(value int) {
-	C.rocksdb_options_set_expanded_compaction_factor(opts.c, C.int(value))
-}
 
 // SetSourceCompactionFactor sets the maximum number of bytes
 // in all source files to be compacted in a single compaction run.
@@ -468,17 +467,13 @@ func (opts *Options) SetExpandedCompactionFactor(value int) {
 // for compaction to exceed
 // (source_compaction_factor * targetFileSizeLevel()) many bytes.
 // Default: 1
-func (opts *Options) SetSourceCompactionFactor(value int) {
-	C.rocksdb_options_set_source_compaction_factor(opts.c, C.int(value))
-}
+
 
 // SetMaxGrandparentOverlapFactor sets the maximum bytes
 // of overlaps in grandparent (i.e., level+2) before we
 // stop building a single file in a level->level+1 compaction.
 // Default: 10
-func (opts *Options) SetMaxGrandparentOverlapFactor(value int) {
-	C.rocksdb_options_set_max_grandparent_overlap_factor(opts.c, C.int(value))
-}
+
 
 // SetDisableDataSync enable/disable data sync.
 //
@@ -512,7 +507,7 @@ func (opts *Options) SetUseFsync(value bool) {
 // Default: empty
 func (opts *Options) SetDbLogDir(value string) {
 	cvalue := C.CString(value)
-	defer C.free(unsafe.Pointer(cvalue))
+	defer C.rocksdb_free(unsafe.Pointer(cvalue))
 	C.rocksdb_options_set_db_log_dir(opts.c, cvalue)
 }
 
@@ -524,7 +519,7 @@ func (opts *Options) SetDbLogDir(value string) {
 // Default: empty
 func (opts *Options) SetWalDir(value string) {
 	cvalue := C.CString(value)
-	defer C.free(unsafe.Pointer(cvalue))
+	defer C.rocksdb_free(unsafe.Pointer(cvalue))
 	C.rocksdb_options_set_wal_dir(opts.c, cvalue)
 }
 
