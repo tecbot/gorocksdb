@@ -18,6 +18,8 @@ const (
 	SnappyCompression = CompressionType(C.rocksdb_snappy_compression)
 	ZLibCompression   = CompressionType(C.rocksdb_zlib_compression)
 	Bz2Compression    = CompressionType(C.rocksdb_bz2_compression)
+	LZ4Compression    = CompressionType(C.rocksdb_lz4_compression)
+	LZ4HCCompression  = CompressionType(C.rocksdb_lz4hc_compression)
 )
 
 // CompactionStyle specifies the compaction style.
