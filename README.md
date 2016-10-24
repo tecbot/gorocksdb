@@ -16,5 +16,5 @@ If you want to go the way with the shared library you'll need to build
 If you built RocksDB you can install gorocksdb now:
 
     CGO_CFLAGS="-I/path/to/rocksdb/include" \
-    CGO_LDFLAGS="-L/path/to/rocksdb -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy" \
+    CGO_LDFLAGS="-L/path/to/rocksdb -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4" \
       go get github.com/tecbot/gorocksdb
