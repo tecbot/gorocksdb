@@ -150,3 +150,13 @@ func (b *BackupEngine) Close() {
 	C.rocksdb_backup_engine_close(b.c)
 	b.c = nil
 }
+
+func (b *BackupEngine) PurgeOldBackups(db *DB, num_backups_to_keep int) error {
+	var cErr *C.char
+	C.rocksdb_backup_engine_purge_old_backups(b.c, C.uint32_t(num_backups_to_keep), &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
