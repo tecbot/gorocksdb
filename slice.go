@@ -21,6 +21,11 @@ func (s *Slice) Data() []byte {
 	return charToByte(s.data, s.size)
 }
 
+// the data will be copied
+func (s *Slice) Bytes() []byte {
+	return C.GoBytes(unsafe.Pointer(s.data), C.int(s.size))
+}
+
 // Size returns the size of the data.
 func (s *Slice) Size() int {
 	return int(s.size)
