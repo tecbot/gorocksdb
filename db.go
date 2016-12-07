@@ -229,6 +229,45 @@ func (db *DB) Get(opts *ReadOptions, key []byte) (*Slice, error) {
 	return NewSlice(cValue, cValLen), nil
 }
 
+// MultiGet returns a slice of values for a slice of keys.
+func (db *DB) MultiGet(opts *ReadOptions, keys [][]byte) ([][]byte, error) {
+	ckeys := make([]*C.char, len(keys))
+	ksize := make([]C.size_t, len(keys))
+	values := make([]*C.char, len(keys))
+	vsize := make([]C.size_t, len(keys))
+	errs := make([]*C.char, len(keys))
+
+	for i, k := range keys {
+		ckeys[i] = C.CString(string(k))
+		ksize[i] = C.size_t(len(k))
+	}
+
+	C.rocksdb_multi_get(
+		db.c,
+		opts.c,
+		C.size_t(len(keys)),
+		&ckeys[0],
+		&ksize[0],
+		&values[0],
+		&vsize[0],
+		&errs[0])
+
+	ret := make([][]byte, 0, len(keys))
+
+	for i, v := range values {
+		if errs[i] != nil {
+			defer C.free(unsafe.Pointer(errs[i]))
+			return nil, errors.New(C.GoString(errs[i]))
+		}
+
+		buf := C.GoBytes(unsafe.Pointer(v), C.int(vsize[i]))
+		ret = append(ret, buf)
+		C.free(unsafe.Pointer(v))
+	}
+
+	return ret, nil
+}
+
 // GetBytes is like Get but returns a copy of the data.
 func (db *DB) GetBytes(opts *ReadOptions, key []byte) ([]byte, error) {
 	var (
