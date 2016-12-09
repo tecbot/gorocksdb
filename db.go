@@ -237,6 +237,12 @@ func (db *DB) MultiGet(opts *ReadOptions, keys [][]byte) ([][]byte, error) {
 	vsize := make([]C.size_t, len(keys))
 	errs := make([]*C.char, len(keys))
 
+	defer func() {
+		for i := range ckeys {
+			C.free(unsafe.Pointer(ckeys[i]))
+		}
+	}()
+
 	for i, k := range keys {
 		ckeys[i] = C.CString(string(k))
 		ksize[i] = C.size_t(len(k))
