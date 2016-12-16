@@ -856,6 +856,10 @@ func (opts *Options) SetBloomLocality(value uint32) {
 	C.rocksdb_options_set_bloom_locality(opts.c, C.uint32_t(value))
 }
 
+//func (opts *Options) SetMemtablePrefixBloomSizeRatio(value float64) {
+//	C.rocksdb_options_set_memtable_prefix_bloom_size_ratio(opts.c, C.double(value))
+//}
+
 // SetMaxSuccessiveMerges sets the maximum number of
 // successive merge operations on a key in the memtable.
 //

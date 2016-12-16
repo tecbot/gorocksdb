@@ -109,3 +109,7 @@ func (opts *BlockBasedTableOptions) SetBlockCacheCompressed(cache *Cache) {
 func (opts *BlockBasedTableOptions) SetWholeKeyFiltering(value bool) {
 	C.rocksdb_block_based_options_set_whole_key_filtering(opts.c, boolToChar(value))
 }
+
+func (opts *BlockBasedTableOptions) SetCacheIndexAndFilterBlocks(value bool) {
+	C.rocksdb_block_based_options_set_cache_index_and_filter_blocks(opts.c, boolToChar(value))
+}
