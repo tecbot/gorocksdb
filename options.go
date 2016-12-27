@@ -889,6 +889,15 @@ func (opts *Options) EnableStatistics() {
 	C.rocksdb_options_enable_statistics(opts.c)
 }
 
+func (opts *Options) GetStatistics() string {
+	cValue := C.rocksdb_options_statistics_get_string(opts.c)
+	if cValue == nil {
+		return ""
+	}
+	defer C.free(unsafe.Pointer(cValue))
+	return C.GoString(cValue)
+}
+
 // PrepareForBulkLoad prepare the DB for bulk loading.
 //
 // All data will be in level 0 without any automatic compaction.
