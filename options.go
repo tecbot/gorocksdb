@@ -688,6 +688,18 @@ func (opts *Options) SetAllowMmapWrites(value bool) {
 	C.rocksdb_options_set_allow_mmap_writes(opts.c, boolToChar(value))
 }
 
+// SetUseDirectReads enable/disable direct I/O mode (O_DIRECT) for reads
+// Default: false
+func (opts *Options) SetUseDirectReads(value bool) {
+	C.rocksdb_options_set_use_direct_reads(opts.c, boolToChar(value))
+}
+
+// SetUseDirectWrites enable/disable direct I/O mode (O_DIRECT) for writes
+// Default: false
+func (opts *Options) SetUseDirectWrites(value bool) {
+	C.rocksdb_options_set_use_direct_writes(opts.c, boolToChar(value))
+}
+
 // SetIsFdCloseOnExec enable/dsiable child process inherit open files.
 // Default: true
 func (opts *Options) SetIsFdCloseOnExec(value bool) {
