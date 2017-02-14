@@ -462,18 +462,6 @@ func (opts *Options) SetMaxBytesForLevelMultiplierAdditional(value []int) {
 	C.rocksdb_options_set_max_bytes_for_level_multiplier_additional(opts.c, &cLevels[0], C.size_t(len(value)))
 }
 
-// SetDisableDataSync enable/disable data sync.
-//
-// If true, then the contents of data files are not synced
-// to stable storage. Their contents remain in the OS buffers till the
-// OS decides to flush them. This option is good for bulk-loading
-// of data. Once the bulk-loading is complete, please issue a
-// sync to the OS to flush all dirty buffers to stable storage.
-// Default: false
-func (opts *Options) SetDisableDataSync(value bool) {
-	C.rocksdb_options_set_disable_data_sync(opts.c, C.int(btoi(value)))
-}
-
 // SetUseFsync enable/disable fsync.
 //
 // If true, then every store to stable storage will issue a fsync.
