@@ -777,15 +777,6 @@ func (opts *Options) SetFIFOCompactionOptions(value *FIFOCompactionOptions) {
 	C.rocksdb_options_set_fifo_compaction_options(opts.c, value.c)
 }
 
-// SetVerifyChecksumsInCompaction enable/disable checksum verification.
-//
-// If true, compaction will verify checksum on every read that happens
-// as part of compaction
-// Default: true
-func (opts *Options) SetVerifyChecksumsInCompaction(value bool) {
-	C.rocksdb_options_set_verify_checksums_in_compaction(opts.c, boolToChar(value))
-}
-
 // SetMaxSequentialSkipInIterations specifies whether an iteration->Next()
 // sequentially skips over keys with the same user-key or not.
 //
@@ -839,17 +830,6 @@ func (opts *Options) SetBloomLocality(value uint32) {
 // Default: 0 (disabled)
 func (opts *Options) SetMaxSuccessiveMerges(value int) {
 	C.rocksdb_options_set_max_successive_merges(opts.c, C.size_t(value))
-}
-
-// SetMinPartialMergeOperands sets the number of partial merge operands
-// to accumulate before partial merge will be performed.
-//
-// Partial merge will not be called if the list of values to merge
-// is less than min_partial_merge_operands.
-// If min_partial_merge_operands < 2, then it will be treated as 2.
-// Default: 2
-func (opts *Options) SetMinPartialMergeOperands(value uint32) {
-	C.rocksdb_options_set_min_partial_merge_operands(opts.c, C.uint32_t(value))
 }
 
 // EnableStatistics enable statistics.
