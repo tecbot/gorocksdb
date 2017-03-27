@@ -61,6 +61,10 @@ func (opts *ReadOptions) SetFillCache(value bool) {
 // not have been released.
 // Default: nil
 func (opts *ReadOptions) SetSnapshot(snap *Snapshot) {
+	if snap == nil {
+		C.rocksdb_readoptions_set_snapshot(opts.c, nil)
+		return
+	}
 	C.rocksdb_readoptions_set_snapshot(opts.c, snap.c)
 }
 

@@ -819,6 +819,10 @@ func (opts *Options) SetBloomLocality(value uint32) {
 	C.rocksdb_options_set_bloom_locality(opts.c, C.uint32_t(value))
 }
 
+//func (opts *Options) SetMemtablePrefixBloomSizeRatio(value float64) {
+//	C.rocksdb_options_set_memtable_prefix_bloom_size_ratio(opts.c, C.double(value))
+//}
+
 // SetMaxSuccessiveMerges sets the maximum number of
 // successive merge operations on a key in the memtable.
 //
@@ -835,6 +839,15 @@ func (opts *Options) SetMaxSuccessiveMerges(value int) {
 // EnableStatistics enable statistics.
 func (opts *Options) EnableStatistics() {
 	C.rocksdb_options_enable_statistics(opts.c)
+}
+
+func (opts *Options) GetStatistics() string {
+	cValue := C.rocksdb_options_statistics_get_string(opts.c)
+	if cValue == nil {
+		return ""
+	}
+	defer C.free(unsafe.Pointer(cValue))
+	return C.GoString(cValue)
 }
 
 // PrepareForBulkLoad prepare the DB for bulk loading.

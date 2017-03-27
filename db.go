@@ -263,6 +263,40 @@ func (db *DB) GetCF(opts *ReadOptions, cf *ColumnFamilyHandle, key []byte) (*Sli
 	return NewSlice(cValue, cValLen), nil
 }
 
+func (db *DB) MultiGetBytes(opts *ReadOptions, keyList [][]byte, values [][]byte, errs []error) {
+	cKeys := make([]*C.char, len(keyList))
+	cKeySizeList := make([]C.size_t, len(keyList))
+	cValues := make([]*C.char, len(keyList))
+	cValueSizeList := make([]C.size_t, len(keyList))
+	cErrs := make([]*C.char, len(keyList))
+	for i, k := range keyList {
+		cKeys[i] = cByteSlice(k)
+		cKeySizeList[i] = C.size_t(len(k))
+	}
+	C.rocksdb_multi_get(db.c, opts.c, C.size_t(len(keyList)),
+		(**C.char)(unsafe.Pointer(&cKeys[0])),
+		(*C.size_t)(unsafe.Pointer(&cKeySizeList[0])),
+		(**C.char)(unsafe.Pointer(&cValues[0])),
+		(*C.size_t)(unsafe.Pointer(&cValueSizeList[0])),
+		(**C.char)(unsafe.Pointer(&cErrs[0])),
+	)
+	for i := 0; i < len(keyList); i++ {
+		if cErrs[i] == nil {
+			if cValues[i] == nil {
+				values[i] = nil
+			} else {
+				values[i] = C.GoBytes(unsafe.Pointer(cValues[i]), C.int(cValueSizeList[i]))
+				C.free(unsafe.Pointer(cValues[i]))
+			}
+		} else {
+			values[i] = nil
+			errs[i] = errors.New(C.GoString(cErrs[i]))
+			C.free(unsafe.Pointer(cErrs[i]))
+		}
+		C.free(unsafe.Pointer(cKeys[i]))
+	}
+}
+
 // Put writes data associated with a key to the database.
 func (db *DB) Put(opts *WriteOptions, key, value []byte) error {
 	var (
@@ -572,6 +606,21 @@ func (db *DB) DisableFileDeletions() error {
 func (db *DB) EnableFileDeletions(force bool) error {
 	var cErr *C.char
 	C.rocksdb_enable_file_deletions(db.c, boolToChar(force), &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
+func (db *DB) DeleteFilesInRange(r Range) error {
+	var (
+		cErr *C.char
+		//cStart = byteToChar(r.Start)
+		//cLimit = byteToChar(r.Limit)
+	)
+	// TODO: wait merge
+	//C.rocksdb_delete_file_in_range(db.c, cStart, C.size_t(len(r.Start)), cEnd, C.size_t(len(r.Limit)), &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return errors.New(C.GoString(cErr))

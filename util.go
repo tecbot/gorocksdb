@@ -45,7 +45,7 @@ func cByteSlice(b []byte) *C.char {
 	var c *C.char
 	if len(b) > 0 {
 		cData := C.malloc(C.size_t(len(b)))
-		copy((*[1 << 24]byte)(cData)[0:len(b)], b)
+		copy((*[1 << 30]byte)(cData)[0:len(b)], b)
 		c = (*C.char)(cData)
 	}
 	return c
