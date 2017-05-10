@@ -588,6 +588,65 @@ func (db *DB) DeleteFile(name string) {
 	C.rocksdb_delete_file(db.c, cName)
 }
 
+// IngestExternalFile loads a list of external SST files.
+func (db *DB) IngestExternalFile(filePaths []string, opts *IngestExternalFileOptions) error {
+	cFilePaths := make([]*C.char, len(filePaths))
+	for i, s := range filePaths {
+		cFilePaths[i] = C.CString(s)
+	}
+	defer func() {
+		for _, s := range cFilePaths {
+			C.free(unsafe.Pointer(s))
+		}
+	}()
+
+	var cErr *C.char
+
+	C.rocksdb_ingest_external_file(
+		db.c,
+		&cFilePaths[0],
+		C.size_t(len(filePaths)),
+		opts.c,
+		&cErr,
+	)
+
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
+// IngestExternalFileCF loads a list of external SST files for a column family.
+func (db *DB) IngestExternalFileCF(handle *ColumnFamilyHandle, filePaths []string, opts *IngestExternalFileOptions) error {
+	cFilePaths := make([]*C.char, len(filePaths))
+	for i, s := range filePaths {
+		cFilePaths[i] = C.CString(s)
+	}
+	defer func() {
+		for _, s := range cFilePaths {
+			C.free(unsafe.Pointer(s))
+		}
+	}()
+
+	var cErr *C.char
+
+	C.rocksdb_ingest_external_file_cf(
+		db.c,
+		handle.c,
+		&cFilePaths[0],
+		C.size_t(len(filePaths)),
+		opts.c,
+		&cErr,
+	)
+
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
 // Close closes the database.
 func (db *DB) Close() {
 	C.rocksdb_close(db.c)
