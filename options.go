@@ -693,10 +693,11 @@ func (opts *Options) SetUseDirectReads(value bool) {
 	C.rocksdb_options_set_use_direct_reads(opts.c, boolToChar(value))
 }
 
-// SetUseDirectWrites enable/disable direct I/O mode (O_DIRECT) for writes
+// SetUseDirectIOForFlushAndCompaction enable/disable direct I/O mode (O_DIRECT) for both reads and writes in background flush and compactions
+// When true, new_table_reader_for_compaction_inputs is forced to true.
 // Default: false
-func (opts *Options) SetUseDirectWrites(value bool) {
-	C.rocksdb_options_set_use_direct_writes(opts.c, boolToChar(value))
+func (opts *Options) SetUseDirectIOForFlushAndCompaction(value bool) {
+	C.rocksdb_options_set_use_direct_io_for_flush_and_compaction(opts.c, boolToChar(value))
 }
 
 // SetIsFdCloseOnExec enable/dsiable child process inherit open files.
