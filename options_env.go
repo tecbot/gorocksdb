@@ -17,3 +17,9 @@ func NewDefaultEnvOptions() *EnvOptions {
 func NewNativeEnvOptions(c *C.rocksdb_envoptions_t) *EnvOptions {
 	return &EnvOptions{c: c}
 }
+
+// Destroy deallocates the EnvOptions object.
+func (opts *EnvOptions) Destroy() {
+	C.rocksdb_envoptions_destroy(opts.c)
+	opts.c = nil
+}
