@@ -121,6 +121,11 @@ func (opts *Options) SetMergeOperator(value MergeOperator) {
 	C.rocksdb_options_set_merge_operator(opts.c, opts.cmo)
 }
 
+// SetUint64AddMergeOperator sets the uint64 add merge operator
+func (opts *Options) SetUint64AddMergeOperator() {
+	C.rocksdb_options_set_uint64add_merge_operator(opts.c)
+}
+
 // A single CompactionFilter instance to call into during compaction.
 // Allows an application to modify/delete a key-value during background
 // compaction.
