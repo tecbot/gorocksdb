@@ -82,6 +82,33 @@ func (opts *ReadOptions) SetTailing(value bool) {
 	C.rocksdb_readoptions_set_tailing(opts.c, boolToChar(value))
 }
 
+// SetIterateUpperBound specifies "iterate_upper_bound", which defines
+// the extent upto which the forward iterator can returns entries.
+// Once the bound is reached, Valid() will be false.
+// "iterate_upper_bound" is exclusive ie the bound value is
+// not a valid entry.  If iterator_extractor is not null, the Seek target
+// and iterator_upper_bound need to have the same prefix.
+// This is because ordering is not guaranteed outside of prefix domain.
+// There is no lower bound on the iterator. If needed, that can be easily
+// implemented.
+// Default: nullptr
+func (opts *ReadOptions) SetIterateUpperBound(key []byte) {
+	cKey := byteToChar(key)
+	cKeyLen := C.size_t(len(key))
+	C.rocksdb_readoptions_set_iterate_upper_bound(opts.c, cKey, cKeyLen)
+}
+
+// SetPinData specifies the value of "pin_data". If true, it keeps the blocks
+// loaded by the iterator pinned in memory as long as the iterator is not deleted,
+// If used when reading from tables created with
+// BlockBasedTableOptions::use_delta_encoding = false,
+// Iterator's property "rocksdb.iterator.is-key-pinned" is guaranteed to
+// return 1.
+// Default: false
+func (opts *ReadOptions) SetPinData(value bool) {
+	C.rocksdb_readoptions_set_pin_data(opts.c, boolToChar(value))
+}
+
 // Destroy deallocates the ReadOptions object.
 func (opts *ReadOptions) Destroy() {
 	C.rocksdb_readoptions_destroy(opts.c)
