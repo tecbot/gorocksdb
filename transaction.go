@@ -57,7 +57,9 @@ func (transaction *Transaction) Get(opts *ReadOptions, key []byte) (*Slice, erro
 		cValLen C.size_t
 		cKey    = byteToChar(key)
 	)
-	cValue := C.rocksdb_transaction_get(transaction.c, opts.c, cKey, C.size_t(len(key)), &cValLen, &cErr)
+	cValue := C.rocksdb_transaction_get(
+		transaction.c, opts.c, cKey, C.size_t(len(key)), &cValLen, &cErr,
+	)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
@@ -72,7 +74,9 @@ func (transaction *Transaction) Put(key, value []byte) error {
 		cKey   = byteToChar(key)
 		cValue = byteToChar(value)
 	)
-	C.rocksdb_transaction_put(transaction.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)), &cErr)
+	C.rocksdb_transaction_put(
+		transaction.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)), &cErr,
+	)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return errors.New(C.GoString(cErr))
@@ -97,5 +101,6 @@ func (transaction *Transaction) Delete(key []byte) error {
 // NewIterator returns an Iterator over the database that uses the
 // ReadOptions given.
 func (transaction *Transaction) NewIterator(opts *ReadOptions) *Iterator {
-	return NewNativeIterator(unsafe.Pointer(C.rocksdb_transaction_create_iterator(transaction.c, opts.c)))
+	return NewNativeIterator(
+		unsafe.Pointer(C.rocksdb_transaction_create_iterator(transaction.c, opts.c)))
 }

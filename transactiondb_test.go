@@ -66,17 +66,19 @@ func TestTransactionDBCRUD(t *testing.T) {
 	ensure.Nil(t, err)
 	ensure.DeepEqual(t, v5.Data(), givenTxnVal1)
 
+	// transaction
 	txn2 := db.TransactionBegin(wo, to, nil)
 	defer txn2.Close()
 	// create
 	ensure.Nil(t, txn2.Put(givenTxnKey2, givenTxnVal1))
+	// rollback
 	ensure.Nil(t, txn2.Rollback())
 
 	v6, err := txn2.Get(ro, givenTxnKey2)
 	defer v6.Free()
 	ensure.Nil(t, err)
 	ensure.True(t, v6.Data() == nil)
-
+	// transaction
 	txn3 := db.TransactionBegin(wo, to, nil)
 	defer txn3.Close()
 	// delete

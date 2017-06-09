@@ -15,14 +15,19 @@ type TransactionDB struct {
 	transactionDBOpts *TransactionDBOptions
 }
 
-// OpenDb opens a database with the specified options.
-func OpenTransactionDb(opts *Options, transactionDBOpts *TransactionDBOptions, name string) (*TransactionDB, error) {
+// OpenTransactionDb opens a database with the specified options.
+func OpenTransactionDb(
+	opts *Options,
+	transactionDBOpts *TransactionDBOptions,
+	name string,
+) (*TransactionDB, error) {
 	var (
 		cErr  *C.char
 		cName = C.CString(name)
 	)
 	defer C.free(unsafe.Pointer(cName))
-	db := C.rocksdb_transactiondb_open(opts.c, transactionDBOpts.c, cName, &cErr)
+	db := C.rocksdb_transactiondb_open(
+		opts.c, transactionDBOpts.c, cName, &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
@@ -36,36 +41,46 @@ func OpenTransactionDb(opts *Options, transactionDBOpts *TransactionDBOptions, n
 }
 
 // NewSnapshot creates a new snapshot of the database.
-func (transactionDB *TransactionDB) NewSnapshot() *Snapshot {
-	return NewNativeSnapshot(C.rocksdb_transactiondb_create_snapshot(transactionDB.c))
+func (db *TransactionDB) NewSnapshot() *Snapshot {
+	return NewNativeSnapshot(C.rocksdb_transactiondb_create_snapshot(db.c))
 }
 
 // ReleaseSnapshot releases the snapshot and its resources.
-func (transactionDB *TransactionDB) ReleaseSnapshot(snapshot *Snapshot) {
-	C.rocksdb_transactiondb_release_snapshot(transactionDB.c, snapshot.c)
+func (db *TransactionDB) ReleaseSnapshot(snapshot *Snapshot) {
+	C.rocksdb_transactiondb_release_snapshot(db.c, snapshot.c)
 	snapshot.c = nil
 }
 
-func (transactionDB *TransactionDB) TransactionBegin(
+// TransactionBegin begins a new transaction
+// with the WriteOptions and TransactionOptions given.
+func (db *TransactionDB) TransactionBegin(
 	opts *WriteOptions,
 	transactionOpts *TransactionOptions,
 	oldTransaction *Transaction,
 ) *Transaction {
 	if oldTransaction != nil {
-		return NewNativeTransaction(C.rocksdb_transaction_begin(transactionDB.c, opts.c, transactionOpts.c, oldTransaction.c))
+		return NewNativeTransaction(C.rocksdb_transaction_begin(
+			db.c,
+			opts.c,
+			transactionOpts.c,
+			oldTransaction.c,
+		))
 	}
 
-	return NewNativeTransaction(C.rocksdb_transaction_begin(transactionDB.c, opts.c, transactionOpts.c, nil))
+	return NewNativeTransaction(C.rocksdb_transaction_begin(
+		db.c, opts.c, transactionOpts.c, nil))
 }
 
 // Get returns the data associated with the key from the database.
-func (transactionDB *TransactionDB) Get(opts *ReadOptions, key []byte) (*Slice, error) {
+func (db *TransactionDB) Get(opts *ReadOptions, key []byte) (*Slice, error) {
 	var (
 		cErr    *C.char
 		cValLen C.size_t
 		cKey    = byteToChar(key)
 	)
-	cValue := C.rocksdb_transactiondb_get(transactionDB.c, opts.c, cKey, C.size_t(len(key)), &cValLen, &cErr)
+	cValue := C.rocksdb_transactiondb_get(
+		db.c, opts.c, cKey, C.size_t(len(key)), &cValLen, &cErr,
+	)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
@@ -74,13 +89,15 @@ func (transactionDB *TransactionDB) Get(opts *ReadOptions, key []byte) (*Slice, 
 }
 
 // Put writes data associated with a key to the database.
-func (transactionDB *TransactionDB) Put(opts *WriteOptions, key, value []byte) error {
+func (db *TransactionDB) Put(opts *WriteOptions, key, value []byte) error {
 	var (
 		cErr   *C.char
 		cKey   = byteToChar(key)
 		cValue = byteToChar(value)
 	)
-	C.rocksdb_transactiondb_put(transactionDB.c, opts.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)), &cErr)
+	C.rocksdb_transactiondb_put(
+		db.c, opts.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)), &cErr,
+	)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return errors.New(C.GoString(cErr))
@@ -89,12 +106,12 @@ func (transactionDB *TransactionDB) Put(opts *WriteOptions, key, value []byte) e
 }
 
 // Delete removes the data associated with the key from the database.
-func (transactionDB *TransactionDB) Delete(opts *WriteOptions, key []byte) error {
+func (db *TransactionDB) Delete(opts *WriteOptions, key []byte) error {
 	var (
 		cErr *C.char
 		cKey = byteToChar(key)
 	)
-	C.rocksdb_transactiondb_delete(transactionDB.c, opts.c, cKey, C.size_t(len(key)), &cErr)
+	C.rocksdb_transactiondb_delete(db.c, opts.c, cKey, C.size_t(len(key)), &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return errors.New(C.GoString(cErr))
@@ -102,11 +119,13 @@ func (transactionDB *TransactionDB) Delete(opts *WriteOptions, key []byte) error
 	return nil
 }
 
-func (transactionDB *TransactionDB) CheckpointObjectCreate() (*Checkpoint, error) {
+func (db *TransactionDB) CheckpointObjectCreate() (*Checkpoint, error) {
 	var (
 		cErr *C.char
 	)
-	cCheckpoint := C.rocksdb_transactiondb_checkpoint_object_create(transactionDB.c, &cErr)
+	cCheckpoint := C.rocksdb_transactiondb_checkpoint_object_create(
+		db.c, &cErr,
+	)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
