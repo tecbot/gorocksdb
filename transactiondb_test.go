@@ -97,6 +97,7 @@ func newTestTransactionDB(t *testing.T, name string, applyOpts func(opts *Option
 	dir, err := ioutil.TempDir("", "gorockstransactiondb-"+name)
 	ensure.Nil(t, err)
 
+	opts := NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
 	transactionDBOpts := NewDefaultTransactionDBOptions()
 	if applyOpts != nil {
