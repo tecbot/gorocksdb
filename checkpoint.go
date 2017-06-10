@@ -47,8 +47,8 @@ func (checkpoint *Checkpoint) CreateCheckpoint(checkpoint_dir string, log_size_f
 	return nil
 }
 
-// Close closes this checkpoint.
-func (checkpoint *Checkpoint) Close() {
+// Destroy deallocates the Checkpoint object.
+func (checkpoint *Checkpoint) Destroy() {
 	C.rocksdb_checkpoint_object_destroy(checkpoint.c)
 	checkpoint.c = nil
 }

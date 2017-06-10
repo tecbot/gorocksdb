@@ -44,12 +44,6 @@ func (transaction *Transaction) Rollback() error {
 	return nil
 }
 
-// Close closes this transaction.
-func (transaction *Transaction) Close() {
-	C.rocksdb_transaction_destroy(transaction.c)
-	transaction.c = nil
-}
-
 // Get returns the data associated with the key from the database given this transaction.
 func (transaction *Transaction) Get(opts *ReadOptions, key []byte) (*Slice, error) {
 	var (
@@ -103,4 +97,10 @@ func (transaction *Transaction) Delete(key []byte) error {
 func (transaction *Transaction) NewIterator(opts *ReadOptions) *Iterator {
 	return NewNativeIterator(
 		unsafe.Pointer(C.rocksdb_transaction_create_iterator(transaction.c, opts.c)))
+}
+
+// Destroy deallocates the transaction object.
+func (transaction *Transaction) Destroy() {
+	C.rocksdb_transaction_destroy(transaction.c)
+	transaction.c = nil
 }

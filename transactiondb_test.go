@@ -53,7 +53,7 @@ func TestTransactionDBCRUD(t *testing.T) {
 
 	// transaction
 	txn := db.TransactionBegin(wo, to, nil)
-	defer txn.Close()
+	defer txn.Destroy()
 	// create
 	ensure.Nil(t, txn.Put(givenTxnKey, givenTxnVal1))
 	v4, err := txn.Get(ro, givenTxnKey)
@@ -69,7 +69,7 @@ func TestTransactionDBCRUD(t *testing.T) {
 
 	// transaction
 	txn2 := db.TransactionBegin(wo, to, nil)
-	defer txn2.Close()
+	defer txn2.Destroy()
 	// create
 	ensure.Nil(t, txn2.Put(givenTxnKey2, givenTxnVal1))
 	// rollback
@@ -81,7 +81,7 @@ func TestTransactionDBCRUD(t *testing.T) {
 	ensure.True(t, v6.Data() == nil)
 	// transaction
 	txn3 := db.TransactionBegin(wo, to, nil)
-	defer txn3.Close()
+	defer txn3.Destroy()
 	// delete
 	ensure.Nil(t, txn3.Delete(givenTxnKey))
 	ensure.Nil(t, txn3.Commit())

@@ -63,3 +63,9 @@ func (opts *TransactionDBOptions) SetTransactionLockTimeout(txn_lock_timeout int
 func (opts *TransactionDBOptions) SetDefaultLockTimeout(default_lock_timeout int64) {
 	C.rocksdb_transactiondb_options_set_default_lock_timeout(opts.c, C.int64_t(default_lock_timeout))
 }
+
+// Destroy deallocates the TransactionDBOptions object.
+func (opts *TransactionDBOptions) Destroy() {
+	C.rocksdb_transactiondb_options_destroy(opts.c)
+	opts.c = nil
+}

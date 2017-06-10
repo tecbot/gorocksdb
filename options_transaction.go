@@ -57,3 +57,9 @@ func (opts *TransactionOptions) SetDeadlockDetectDepth(depth int64) {
 func (opts *TransactionOptions) SetMaxWriteBatchSize(size uint64) {
 	C.rocksdb_transaction_options_set_max_write_batch_size(opts.c, C.size_t(size))
 }
+
+// Destroy deallocates the TransactionOptions object.
+func (opts *TransactionOptions) Destroy() {
+	C.rocksdb_transaction_options_destroy(opts.c)
+	opts.c = nil
+}
