@@ -653,6 +653,22 @@ func (db *DB) IngestExternalFileCF(handle *ColumnFamilyHandle, filePaths []strin
 	return nil
 }
 
+// Creates a new Checkpoint for this db
+func (db *DB) NewCheckpoint() (*Checkpoint, error) {
+	var (
+		cErr *C.char
+	)
+	cCheckpoint := C.rocksdb_checkpoint_object_create(
+		db.c, &cErr,
+	)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+
+	return NewNativeCheckpoint(cCheckpoint), nil
+}
+
 // Close closes the database.
 func (db *DB) Close() {
 	C.rocksdb_close(db.c)

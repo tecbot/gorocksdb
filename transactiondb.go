@@ -119,7 +119,8 @@ func (db *TransactionDB) Delete(opts *WriteOptions, key []byte) error {
 	return nil
 }
 
-func (db *TransactionDB) CheckpointObjectCreate() (*Checkpoint, error) {
+// Creates a new Checkpoint for this db
+func (db *TransactionDB) NewCheckpoint() (*Checkpoint, error) {
 	var (
 		cErr *C.char
 	)
