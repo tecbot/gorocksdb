@@ -52,6 +52,9 @@ func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
 	ensure.Nil(t, err)
 
 	opts := NewDefaultOptions()
+	// test the ratelimiter
+	rateLimiter := NewRateLimiter(1024, 100*1000, 10)
+	opts.SetRateLimiter(rateLimiter)
 	opts.SetCreateIfMissing(true)
 	if applyOpts != nil {
 		applyOpts(opts)

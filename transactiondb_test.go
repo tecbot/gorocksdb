@@ -47,6 +47,7 @@ func TestTransactionDBCRUD(t *testing.T) {
 	// delete
 	ensure.Nil(t, db.Delete(wo, givenKey))
 	v3, err := db.Get(ro, givenKey)
+	defer v3.Free()
 	ensure.Nil(t, err)
 	ensure.True(t, v3.Data() == nil)
 
@@ -96,7 +97,6 @@ func newTestTransactionDB(t *testing.T, name string, applyOpts func(opts *Option
 	dir, err := ioutil.TempDir("", "gorockstransactiondb-"+name)
 	ensure.Nil(t, err)
 
-	opts := NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
 	transactionDBOpts := NewDefaultTransactionDBOptions()
 	if applyOpts != nil {
