@@ -9,10 +9,12 @@ import (
 	"unsafe"
 )
 
+// Transaction is used with TransactionDB for transaction support.
 type Transaction struct {
 	c *C.rocksdb_transaction_t
 }
 
+// NewNativeTransaction creates a Transaction object.
 func NewNativeTransaction(c *C.rocksdb_transaction_t) *Transaction {
 	return &Transaction{c}
 }

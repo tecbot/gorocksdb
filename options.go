@@ -778,6 +778,7 @@ func (opts *Options) SetFIFOCompactionOptions(value *FIFOCompactionOptions) {
 	C.rocksdb_options_set_fifo_compaction_options(opts.c, value.c)
 }
 
+// SetRateLimiter sets the rate limiter of the options.
 // Use to control write rate of flush and compaction. Flush has higher
 // priority than compaction. Rate limiting is disabled if nullptr.
 // If rate limiter is enabled, bytes_per_sync is set to 1MB by default.

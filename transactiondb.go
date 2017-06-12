@@ -8,6 +8,7 @@ import (
 	"unsafe"
 )
 
+// TransactionDB is a reusable handle to a RocksDB transactional database on disk, created by OpenTransactionDb.
 type TransactionDB struct {
 	c                 *C.rocksdb_transactiondb_t
 	name              string
@@ -119,7 +120,7 @@ func (db *TransactionDB) Delete(opts *WriteOptions, key []byte) error {
 	return nil
 }
 
-// Creates a new Checkpoint for this db
+// NewCheckpoint creates a new Checkpoint for this db.
 func (db *TransactionDB) NewCheckpoint() (*Checkpoint, error) {
 	var (
 		cErr *C.char

@@ -653,7 +653,7 @@ func (db *DB) IngestExternalFileCF(handle *ColumnFamilyHandle, filePaths []strin
 	return nil
 }
 
-// Creates a new Checkpoint for this db
+// NewCheckpoint creates a new Checkpoint for this db.
 func (db *DB) NewCheckpoint() (*Checkpoint, error) {
 	var (
 		cErr *C.char

@@ -9,6 +9,8 @@ import (
 	"unsafe"
 )
 
+// Checkpoint provides Checkpoint functionality.
+// Checkpoints provide persistent snapshots of RocksDB databases.
 type Checkpoint struct {
 	c *C.rocksdb_checkpoint_t
 }
@@ -18,7 +20,7 @@ func NewNativeCheckpoint(c *C.rocksdb_checkpoint_t) *Checkpoint {
 	return &Checkpoint{c}
 }
 
-// Builds an openable snapshot of RocksDB on the same disk, which
+// CreateCheckpoint builds an openable snapshot of RocksDB on the same disk, which
 // accepts an output directory on the same disk, and under the directory
 // (1) hard-linked SST files pointing to existing live SST files
 // SST files will be copied if output directory is on a different filesystem

@@ -4,6 +4,8 @@ package gorocksdb
 // #include "rocksdb/c.h"
 import "C"
 
+// RateLimiter, is used to control write rate of flush and
+// compaction.
 type RateLimiter struct {
 	c *C.rocksdb_ratelimiter_t
 }
