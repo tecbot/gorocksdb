@@ -9,7 +9,7 @@ You'll need to build [RocksDB](https://github.com/facebook/rocksdb) v5.4+ on you
 After that, you can install gorocksdb using the following command:
 
     CGO_CFLAGS="-I/path/to/rocksdb/include" \
-    CGO_LDFLAGS="-L/path/to/rocksdb -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4" \
+    CGO_LDFLAGS="-L/path/to/rocksdb -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4 -lzstd" \
       go get github.com/tecbot/gorocksdb
 
 Please note that this package might upgrade the required RocksDB version at any moment.
