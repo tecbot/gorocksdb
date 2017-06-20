@@ -112,7 +112,7 @@ func (opts *Options) SetComparator(value Comparator) {
 // if a merge operations are used.
 // Default: nil
 func (opts *Options) SetMergeOperator(value MergeOperator) {
-	if nmo, ok := value.(nativeMergeOperator); ok {
+	if nmo, ok := value.(NativeMergeOperator); ok {
 		opts.cmo = nmo.c
 	} else {
 		idx := registerMergeOperator(value)
@@ -915,9 +915,6 @@ func (opts *Options) Destroy() {
 	C.rocksdb_options_destroy(opts.c)
 	if opts.ccmp != nil {
 		C.rocksdb_comparator_destroy(opts.ccmp)
-	}
-	if opts.cmo != nil {
-		C.rocksdb_mergeoperator_destroy(opts.cmo)
 	}
 	if opts.cst != nil {
 		C.rocksdb_slicetransform_destroy(opts.cst)
