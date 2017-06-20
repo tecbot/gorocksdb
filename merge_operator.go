@@ -48,21 +48,24 @@ type MergeOperator interface {
 }
 
 // NewNativeMergeOperator creates a MergeOperator object.
-func NewNativeMergeOperator(c *C.rocksdb_mergeoperator_t) MergeOperator {
-	return nativeMergeOperator{c}
+func NewNativeMergeOperator(c *C.rocksdb_mergeoperator_t) NativeMergeOperator {
+	return NativeMergeOperator{c}
 }
 
-type nativeMergeOperator struct {
+type NativeMergeOperator struct {
 	c *C.rocksdb_mergeoperator_t
 }
 
-func (mo nativeMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
+func (mo NativeMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
 	return nil, false
 }
-func (mo nativeMergeOperator) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) {
+func (mo NativeMergeOperator) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) {
 	return nil, false
 }
-func (mo nativeMergeOperator) Name() string { return "" }
+func (mo NativeMergeOperator) Name() string { return "" }
+func (mo NativeMergeOperator) Destroy() {
+	C.rocksdb_mergeoperator_destroy(mo.c)
+}
 
 // Hold references to merge operators.
 var mergeOperators []MergeOperator
