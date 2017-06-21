@@ -380,7 +380,13 @@ func (db *DB) NewIteratorCF(opts *ReadOptions, cf *ColumnFamilyHandle) *Iterator
 // NewSnapshot creates a new snapshot of the database.
 func (db *DB) NewSnapshot() *Snapshot {
 	cSnap := C.rocksdb_create_snapshot(db.c)
-	return NewNativeSnapshot(cSnap, db.c)
+	return NewNativeSnapshot(cSnap)
+}
+
+// ReleaseSnapshot releases the snapshot and its resources.
+func (db *DB) ReleaseSnapshot(snapshot *Snapshot) {
+	C.rocksdb_release_snapshot(db.c, snapshot.c)
+	snapshot.c = nil
 }
 
 // GetProperty returns the value of a database property.
@@ -645,6 +651,22 @@ func (db *DB) IngestExternalFileCF(handle *ColumnFamilyHandle, filePaths []strin
 		return errors.New(C.GoString(cErr))
 	}
 	return nil
+}
+
+// NewCheckpoint creates a new Checkpoint for this db.
+func (db *DB) NewCheckpoint() (*Checkpoint, error) {
+	var (
+		cErr *C.char
+	)
+	cCheckpoint := C.rocksdb_checkpoint_object_create(
+		db.c, &cErr,
+	)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+
+	return NewNativeCheckpoint(cCheckpoint), nil
 }
 
 // Close closes the database.
