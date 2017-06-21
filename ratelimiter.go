@@ -19,7 +19,7 @@ func NewRateLimiter(rate_bytes_per_sec, refill_period_us int64, fairness int32) 
 	))
 }
 
-// NewNativeRateLimiter creates a native RateLimiter object
+// NewNativeRateLimiter creates a native RateLimiter object.
 func NewNativeRateLimiter(c *C.rocksdb_ratelimiter_t) *RateLimiter {
 	return &RateLimiter{c}
 }
