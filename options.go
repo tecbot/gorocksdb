@@ -925,9 +925,6 @@ func (opts *Options) Destroy() {
 	if opts.ccmp != nil {
 		C.rocksdb_comparator_destroy(opts.ccmp)
 	}
-	if opts.cmo != nil {
-		C.rocksdb_mergeoperator_destroy(opts.cmo)
-	}
 	if opts.cst != nil {
 		C.rocksdb_slicetransform_destroy(opts.cst)
 	}
