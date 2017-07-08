@@ -81,10 +81,9 @@ func TestColumnFamilyBatchPutGet(t *testing.T) {
 	defer b0.Destroy()
 	b0.PutCF(cfh[0], givenKey0, givenVal0)
 	ensure.Nil(t, db.Write(wo, b0))
-	actualVal0, err := db.GetCF(ro, cfh[0], givenKey0)
-	defer actualVal0.Free()
+	actualVal0, err := db.GetBytesCF(ro, cfh[0], givenKey0)
 	ensure.Nil(t, err)
-	ensure.DeepEqual(t, actualVal0.Data(), givenVal0)
+	ensure.DeepEqual(t, actualVal0, givenVal0)
 
 	b1 := NewWriteBatch()
 	defer b1.Destroy()
