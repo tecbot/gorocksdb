@@ -16,10 +16,10 @@ func NewSlice(data *C.char, size C.size_t) *Slice {
 	return &Slice{data, size, false}
 }
 
-// MakeSlice is similar to NewSlice, but can be called with 
+// StringToSlice is similar to NewSlice, but can be called with
 // a Go string type. This exists to make testing integration
 // with Gorocksdb easier.
-func MakeSlice(data string) *Slice {
+func StringToSlice(data string) *Slice {
 	return NewSlice(C.CString(data), C.size_t(len(data)))
 }
 
