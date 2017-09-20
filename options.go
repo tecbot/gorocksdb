@@ -188,6 +188,42 @@ func (opts *Options) SetParanoidChecks(value bool) {
 	C.rocksdb_options_set_paranoid_checks(opts.c, boolToChar(value))
 }
 
+// SetDBPaths sets the DBPaths of the options.
+//
+// A list of paths where SST files can be put into, with its target size.
+// Newer data is placed into paths specified earlier in the vector while
+// older data gradually moves to paths specified later in the vector.
+//
+// For example, you have a flash device with 10GB allocated for the DB,
+// as well as a hard drive of 2TB, you should config it to be:
+//   [{"/flash_path", 10GB}, {"/hard_drive", 2TB}]
+//
+// The system will try to guarantee data under each path is close to but
+// not larger than the target size. But current and future file sizes used
+// by determining where to place a file are based on best-effort estimation,
+// which means there is a chance that the actual size under the directory
+// is slightly more than target size under some workloads. User should give
+// some buffer room for those cases.
+//
+// If none of the paths has sufficient room to place a file, the file will
+// be placed to the last path anyway, despite to the target size.
+//
+// Placing newer data to earlier paths is also best-efforts. User should
+// expect user files to be placed in higher levels in some extreme cases.
+//
+// If left empty, only one path will be used, which is db_name passed when
+// opening the DB.
+// Default: empty
+func (opts *Options) SetDBPaths(dbpaths []*DBPath) {
+	l := len(dbpaths)
+	cDbpaths := make([]*C.rocksdb_dbpath_t, l)
+	for i, v := range dbpaths {
+		cDbpaths[i] = v.c
+	}
+
+	C.rocksdb_options_set_db_paths(opts.c, &cDbpaths[0], C.size_t(l))
+}
+
 // SetEnv sets the specified object to interact with the environment,
 // e.g. to read/write files, schedule background work, etc.
 // Default: DefaultEnv
