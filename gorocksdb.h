@@ -1,8 +1,9 @@
 #include <stdlib.h>
 #include "rocksdb/c.h"
+#include "rocksdb/version.h"
 
-// This API provides convenient C wrapper functions for rocksdb client.
 
+extern int rocksdb_version();
 /* Base */
 
 extern void gorocksdb_destruct_handler(void* state);

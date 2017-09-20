@@ -3,6 +3,12 @@
 
 /* Base */
 
+// this has to be the stupidest way of doing this but my C skills
+// are vanishingly small
+int rocksdb_version() {
+  return ROCKSDB_MAJOR<<16 | ROCKSDB_MINOR << 8 | ROCKSDB_PATCH;
+}
+
 void gorocksdb_destruct_handler(void* state) { }
 
 /* Comparator */

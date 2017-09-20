@@ -1,10 +1,17 @@
 package gorocksdb
 
+// #include "gorocksdb.h"
 import "C"
 import (
+	"fmt"
 	"reflect"
 	"unsafe"
 )
+
+func RocksDBVersion() string {
+	ver := C.rocksdb_version()
+	return fmt.Sprintf("%d.%d.%d", ver>>16, (ver&0xFFFF)>>8, ver&0xFF)
+}
 
 // btoi converts a bool value to int.
 func btoi(b bool) int {
