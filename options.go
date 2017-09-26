@@ -778,6 +778,15 @@ func (opts *Options) SetFIFOCompactionOptions(value *FIFOCompactionOptions) {
 	C.rocksdb_options_set_fifo_compaction_options(opts.c, value.c)
 }
 
+// SetRateLimiter sets the rate limiter of the options.
+// Use to control write rate of flush and compaction. Flush has higher
+// priority than compaction. Rate limiting is disabled if nullptr.
+// If rate limiter is enabled, bytes_per_sync is set to 1MB by default.
+// Default: nullptr
+func (opts *Options) SetRateLimiter(rateLimiter *RateLimiter) {
+	C.rocksdb_options_set_ratelimiter(opts.c, rateLimiter.c)
+}
+
 // SetMaxSequentialSkipInIterations specifies whether an iteration->Next()
 // sequentially skips over keys with the same user-key or not.
 //
@@ -915,9 +924,6 @@ func (opts *Options) Destroy() {
 	C.rocksdb_options_destroy(opts.c)
 	if opts.ccmp != nil {
 		C.rocksdb_comparator_destroy(opts.ccmp)
-	}
-	if opts.cmo != nil {
-		C.rocksdb_mergeoperator_destroy(opts.cmo)
 	}
 	if opts.cst != nil {
 		C.rocksdb_slicetransform_destroy(opts.cst)

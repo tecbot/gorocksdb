@@ -18,6 +18,16 @@ func NewNativeCache(c *C.rocksdb_cache_t) *Cache {
 	return &Cache{c}
 }
 
+// GetUsage returns the Cache memory usage.
+func (c *Cache) GetUsage() int {
+	return int(C.rocksdb_cache_get_usage(c.c))
+}
+
+// GetPinnedUsage returns the Cache pinned memory usage.
+func (c *Cache) GetPinnedUsage() int {
+	return int(C.rocksdb_cache_get_pinned_usage(c.c))
+}
+
 // Destroy deallocates the Cache object.
 func (c *Cache) Destroy() {
 	C.rocksdb_cache_destroy(c.c)
