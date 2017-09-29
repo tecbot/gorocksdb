@@ -95,7 +95,8 @@ gorocksdb_many_keys_t* gorocksdb_iter_next_many_keys(rocksdb_iterator_t* iter, i
 }
 
 void gorocksdb_destroy_many_keys(gorocksdb_many_keys_t* many_keys) {
-    for (int i = 0; i < many_keys->found; i++) {
+    int i;
+    for (i = 0; i < many_keys->found; i++) {
         free(many_keys->keys[i]);
     }
 
