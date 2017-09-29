@@ -1,5 +1,6 @@
 #include "gorocksdb.h"
 #include "_cgo_export.h"
+#include <string.h>
 
 /* Base */
 
@@ -63,4 +64,42 @@ rocksdb_slicetransform_t* gorocksdb_slicetransform_create(uintptr_t idx) {
     	(unsigned char (*)(void*, const char*, size_t))(gorocksdb_slicetransform_in_domain),
     	(unsigned char (*)(void*, const char*, size_t))(gorocksdb_slicetransform_in_range),
     	(const char* (*)(void*))(gorocksdb_slicetransform_name));
+}
+
+gorocksdb_many_keys_t* gorocksdb_iter_next_many_keys(rocksdb_iterator_t* iter, int size) {
+    int i = 0;
+    gorocksdb_many_keys_t* many_keys = (gorocksdb_many_keys_t*) malloc(sizeof(gorocksdb_many_keys_t));
+
+    char** keys;
+    size_t* key_sizes;
+    keys = (char**) malloc(size * sizeof(char*));
+    key_sizes = (size_t*) malloc(size * sizeof(size_t));
+
+    for (i = 0; i < size; i++) {
+        if (!rocksdb_iter_valid(iter)) {
+            break;
+        }
+
+        // Stuff
+        const char* key = rocksdb_iter_key(iter, &key_sizes[i]);
+        keys[i] = (char*) malloc(key_sizes[i] * sizeof(char));
+        memcpy(keys[i], key, key_sizes[i]);
+
+        rocksdb_iter_next(iter);
+    }
+
+    many_keys->keys = keys;
+    many_keys->key_sizes = key_sizes;
+    many_keys->found = i;
+    return many_keys;
+}
+
+void gorocksdb_destroy_many_keys(gorocksdb_many_keys_t* many_keys) {
+    for (int i = 0; i < many_keys->found; i++) {
+        free(many_keys->keys[i]);
+    }
+
+    free(many_keys->keys);
+    free(many_keys->key_sizes);
+    free(many_keys);
 }
