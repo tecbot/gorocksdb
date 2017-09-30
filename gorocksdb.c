@@ -94,8 +94,54 @@ gorocksdb_many_keys_t* gorocksdb_iter_next_many_keys(rocksdb_iterator_t* iter, i
     return many_keys;
 }
 
-gorocksdb_many_keys_t* gorocksdb_iter_next_many_keys_f(rocksdb_iterator_t* iter, int size, const char* key_prefix, const char* key_limit) {
-    return gorocksdb_iter_next_many_keys(iter, size);
+#include "stdio.h"
+
+gorocksdb_many_keys_t* gorocksdb_iter_next_many_keys_f(rocksdb_iterator_t* iter, int size, const gorocksdb_many_keys_filter_t* key_filter) {
+    int i = 0;
+    gorocksdb_many_keys_t* many_keys = (gorocksdb_many_keys_t*) malloc(sizeof(gorocksdb_many_keys_t));
+
+    char** keys;
+    size_t* key_sizes;
+    size_t key_size, cmp_size;
+    keys = (char**) malloc(size * sizeof(char*));
+    key_sizes = (size_t*) malloc(size * sizeof(size_t));
+
+    for (i = 0; i < size; i++) {
+        if (!rocksdb_iter_valid(iter)) {
+            break;
+        }
+        // Get key
+        const char* key = rocksdb_iter_key(iter, &key_size);
+        // Check filter
+        if (key_filter->key_prefix_s > 0) {
+            if (key_size < key_filter->key_prefix_s) {
+                break;
+            }
+            if (memcmp(key_filter->key_prefix, key, key_filter->key_prefix_s) != 0) {
+                break;
+            }
+        }
+        if (key_filter->key_end_s > 0) {
+            cmp_size = key_size > key_filter->key_end_s ? key_filter->key_end_s : key_size;
+            int c;
+            c = memcmp(key, key_filter->key_end, cmp_size);
+            if (c == 0 && key_filter->key_end_s == key_size) {
+                break;
+            } else if (c > 0) {
+                break;
+            }
+        }
+        key_sizes[i] = key_size;
+        keys[i] = (char*) malloc(key_sizes[i] * sizeof(char));
+        memcpy(keys[i], key, key_sizes[i]);
+
+        rocksdb_iter_next(iter);
+    }
+
+    many_keys->keys = keys;
+    many_keys->key_sizes = key_sizes;
+    many_keys->found = i;
+    return many_keys;
 }
 
 void gorocksdb_destroy_many_keys(gorocksdb_many_keys_t* many_keys) {

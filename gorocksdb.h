@@ -40,6 +40,15 @@ extern rocksdb_slicetransform_t* gorocksdb_slicetransform_create(uintptr_t idx);
 /* Iterate many keys */
 
 extern gorocksdb_many_keys_t* gorocksdb_iter_next_many_keys(rocksdb_iterator_t* iter, int size);
-extern gorocksdb_many_keys_t* gorocksdb_iter_next_many_keys_f(rocksdb_iterator_t* iter, int size, const char* key_prefix, const char* key_limit);
+
+typedef struct {
+    char* key_prefix;
+    size_t key_prefix_s;
+    char* key_end;
+    size_t key_end_s;
+
+} gorocksdb_many_keys_filter_t;
+
+extern gorocksdb_many_keys_t* gorocksdb_iter_next_many_keys_f(rocksdb_iterator_t* iter, int size, const gorocksdb_many_keys_filter_t* key_filter);
 
 extern void gorocksdb_destroy_many_keys(gorocksdb_many_keys_t* many_keys);

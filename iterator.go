@@ -110,16 +110,22 @@ func (iter *Iterator) NextManyKeys(size int) *ManyKeys {
 	return &ManyKeys{c: C.gorocksdb_iter_next_many_keys(iter.c, C.int(size))}
 }
 
-//if seekAt.HasPrefix != nil && !bytes.HasPrefix(key, seekAt.HasPrefix) {
-//return false
-//}
-//if seekAt.LimitKey != nil && bytes.Compare(key, seekAt.LimitKey) != -1 {
-//return false
-//}
-
 //....
 func (iter *Iterator) NextManyKeysF(size int, keyPrefix, keyEnd []byte) *ManyKeys {
-	return &ManyKeys{c: C.gorocksdb_iter_next_many_keys_f(iter.c, C.int(size), byteToChar(keyPrefix), byteToChar(keyEnd))}
+	cKeyFilter := C.gorocksdb_many_keys_filter_t{}
+	if len(keyPrefix) > 0 {
+		cKeyPrefix := C.CString(string(keyPrefix))
+		defer C.free(unsafe.Pointer(cKeyPrefix))
+		cKeyFilter.key_prefix = cKeyPrefix
+		cKeyFilter.key_prefix_s = C.size_t(len(keyPrefix))
+	}
+	if len(keyEnd) > 0 {
+		cKeyEnd := C.CString(string(keyEnd))
+		defer C.free(unsafe.Pointer(cKeyEnd))
+		cKeyFilter.key_end = cKeyEnd
+		cKeyFilter.key_end_s = C.size_t(len(keyEnd))
+	}
+	return &ManyKeys{c: C.gorocksdb_iter_next_many_keys_f(iter.c, C.int(size), &cKeyFilter)}
 }
 
 // Prev moves the iterator to the previous sequential key in the database.
