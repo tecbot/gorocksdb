@@ -37,5 +37,9 @@ extern void gorocksdb_mergeoperator_delete_value(void* state, const char* v, siz
 
 extern rocksdb_slicetransform_t* gorocksdb_slicetransform_create(uintptr_t idx);
 
+/* Iterate many keys */
+
 extern gorocksdb_many_keys_t* gorocksdb_iter_next_many_keys(rocksdb_iterator_t* iter, int size);
-void gorocksdb_destroy_many_keys(gorocksdb_many_keys_t* many_keys);
+extern gorocksdb_many_keys_t* gorocksdb_iter_next_many_keys_f(rocksdb_iterator_t* iter, int size, const char* key_prefix, const char* key_limit);
+
+extern void gorocksdb_destroy_many_keys(gorocksdb_many_keys_t* many_keys);

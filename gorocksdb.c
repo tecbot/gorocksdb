@@ -94,6 +94,10 @@ gorocksdb_many_keys_t* gorocksdb_iter_next_many_keys(rocksdb_iterator_t* iter, i
     return many_keys;
 }
 
+gorocksdb_many_keys_t* gorocksdb_iter_next_many_keys_f(rocksdb_iterator_t* iter, int size, const char* key_prefix, const char* key_limit) {
+    return gorocksdb_iter_next_many_keys(iter, size);
+}
+
 void gorocksdb_destroy_many_keys(gorocksdb_many_keys_t* many_keys) {
     int i;
     for (i = 0; i < many_keys->found; i++) {
