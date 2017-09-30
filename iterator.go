@@ -2,6 +2,7 @@ package gorocksdb
 
 // #include <stdlib.h>
 // #include "rocksdb/c.h"
+// #include "gorocksdb.h"
 import "C"
 import (
 	"bytes"
@@ -77,6 +78,54 @@ func (iter *Iterator) Value() *Slice {
 // Next moves the iterator to the next sequential key in the database.
 func (iter *Iterator) Next() {
 	C.rocksdb_iter_next(iter.c)
+}
+
+type ManyKeys struct {
+	c *C.gorocksdb_many_keys_t
+}
+
+func (m *ManyKeys) Destroy() {
+	C.gorocksdb_destroy_many_keys(m.c)
+}
+
+func (m *ManyKeys) Found() int {
+	return int(m.c.found)
+}
+
+func (m *ManyKeys) Keys() [][]byte {
+	found := m.Found()
+	keys := make([][]byte, found)
+
+	for i := uintptr(0); i < uintptr(found); i++ {
+		chars := *(**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(m.c.keys)) + i*unsafe.Sizeof(m.c.keys)))
+		size := *(*C.size_t)(unsafe.Pointer(uintptr(unsafe.Pointer(m.c.key_sizes)) + i*unsafe.Sizeof(m.c.key_sizes)))
+		keys[i] = charToByte(chars, size)
+
+	}
+	return keys
+}
+
+//....
+func (iter *Iterator) NextManyKeys(size int) *ManyKeys {
+	return &ManyKeys{c: C.gorocksdb_iter_next_many_keys(iter.c, C.int(size))}
+}
+
+//....
+func (iter *Iterator) NextManyKeysF(size int, keyPrefix, keyEnd []byte) *ManyKeys {
+	cKeyFilter := C.gorocksdb_many_keys_filter_t{}
+	if len(keyPrefix) > 0 {
+		cKeyPrefix := C.CString(string(keyPrefix))
+		defer C.free(unsafe.Pointer(cKeyPrefix))
+		cKeyFilter.key_prefix = cKeyPrefix
+		cKeyFilter.key_prefix_s = C.size_t(len(keyPrefix))
+	}
+	if len(keyEnd) > 0 {
+		cKeyEnd := C.CString(string(keyEnd))
+		defer C.free(unsafe.Pointer(cKeyEnd))
+		cKeyFilter.key_end = cKeyEnd
+		cKeyFilter.key_end_s = C.size_t(len(keyEnd))
+	}
+	return &ManyKeys{c: C.gorocksdb_iter_next_many_keys_f(iter.c, C.int(size), &cKeyFilter)}
 }
 
 // Prev moves the iterator to the previous sequential key in the database.
