@@ -125,6 +125,16 @@ func (b *BackupEngine) GetInfo() *BackupEngineInfo {
 	}
 }
 
+func (b *BackupEngine) PurgeOldBackups(keepCount int) error {
+	var cErr *C.char
+	C.rocksdb_backup_engine_purge_old_backups(b.c, C.uint32_t(keepCount), &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
 // RestoreDBFromLatestBackup restores the latest backup to dbDir. walDir
 // is where the write ahead logs are restored to and usually the same as dbDir.
 func (b *BackupEngine) RestoreDBFromLatestBackup(dbDir, walDir string, ro *RestoreOptions) error {
