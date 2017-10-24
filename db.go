@@ -263,6 +263,25 @@ func (db *DB) GetCF(opts *ReadOptions, cf *ColumnFamilyHandle, key []byte) (*Sli
 	return NewSlice(cValue, cValLen), nil
 }
 
+// GetBytesCF returns a []byte copy of the data associated with the key from the database and column family.
+func (db *DB) GetBytesCF(opts *ReadOptions, cf *ColumnFamilyHandle, key []byte) ([]byte, error) {
+	var (
+		cErr    *C.char
+		cValLen C.size_t
+		cKey    = byteToChar(key)
+	)
+	cValue := C.rocksdb_get_cf(db.c, opts.c, cf.c, cKey, C.size_t(len(key)), &cValLen, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	if cValue == nil {
+		return nil, nil
+	}
+	defer C.free(unsafe.Pointer(cValue))
+	return C.GoBytes(unsafe.Pointer(cValue), C.int(cValLen)), nil
+}
+
 // Put writes data associated with a key to the database.
 func (db *DB) Put(opts *WriteOptions, key, value []byte) error {
 	var (

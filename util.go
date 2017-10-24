@@ -1,10 +1,17 @@
 package gorocksdb
 
+// #include "gorocksdb.h"
 import "C"
 import (
+	"fmt"
 	"reflect"
 	"unsafe"
 )
+
+func RocksDBVersion() string {
+	ver := C.rocksdb_version()
+	return fmt.Sprintf("%d.%d.%d", ver>>16, (ver&0xFFFF)>>8, ver&0xFF)
+}
 
 // btoi converts a bool value to int.
 func btoi(b bool) int {
@@ -52,9 +59,10 @@ func cByteSlice(b []byte) *C.char {
 }
 
 // stringToChar returns *C.char from string.
+// The C string is allocated in the C heap using malloc. It is the
+// caller's responsibility to arrange for it to be freed.
 func stringToChar(s string) *C.char {
-	ptrStr := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	return (*C.char)(unsafe.Pointer(ptrStr.Data))
+	return C.CString(s)
 }
 
 // charSlice converts a C array of *char to a []*C.char.

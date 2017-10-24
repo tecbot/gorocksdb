@@ -7,6 +7,11 @@ import (
 	"github.com/facebookgo/ensure"
 )
 
+func TestVersion(t *testing.T) {
+	ver := RocksDBVersion()
+	ensure.NotNil(t, ver)
+}
+
 func TestOpenDb(t *testing.T) {
 	db := newTestDB(t, "TestOpenDb", nil)
 	defer db.Close()
