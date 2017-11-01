@@ -26,8 +26,8 @@ type CompactionFilter interface {
 }
 
 // NewNativeCompactionFilter creates a CompactionFilter object.
-func NewNativeCompactionFilter(c *C.rocksdb_comparator_t) Comparator {
-	return nativeComparator{c}
+func NewNativeCompactionFilter(c *C.rocksdb_compactionfilter_t) CompactionFilter {
+	return nativeCompactionFilter{c}
 }
 
 type nativeCompactionFilter struct {
