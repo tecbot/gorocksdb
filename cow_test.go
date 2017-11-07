@@ -1,6 +1,7 @@
 package gorocksdb
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 
@@ -32,5 +33,16 @@ func TestCOWListMT(t *testing.T) {
 	wg.Wait()
 	for i, v := range expectedRes {
 		ensure.DeepEqual(t, cl.Get(i), v)
+	}
+}
+
+func BenchmarkCOWList_Get(b *testing.B) {
+	cl := NewCOWList()
+	for i := 0; i < 10; i++ {
+		cl.Append(fmt.Sprintf("helloworld%d", i))
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = cl.Get(i % 10).(string)
 	}
 }
