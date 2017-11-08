@@ -341,6 +341,25 @@ func (opts *Options) SetMaxOpenFiles(value int) {
 	C.rocksdb_options_set_max_open_files(opts.c, C.int(value))
 }
 
+// SetMaxFileOpeningThreads sets the maximum number of file opening threads.
+// If max_open_files is -1, DB will open all files on DB::Open(). You can
+// use this option to increase the number of threads used to open the files.
+// Default: 16
+func (opts *Options) SetMaxFileOpeningThreads(value int) {
+	C.rocksdb_options_set_max_file_opening_threads(opts.c, C.int(value))
+}
+
+// SetMaxTotalWalSize sets the maximum total wal size in bytes.
+// Once write-ahead logs exceed this size, we will start forcing the flush of
+// column families whose memtables are backed by the oldest live WAL file
+// (i.e. the ones that are causing all the space amplification). If set to 0
+// (default), we will dynamically choose the WAL size limit to be
+// [sum of all write_buffer_size * max_write_buffer_number] * 4
+// Default: 0
+func (opts *Options) SetMaxTotalWalSize(value uint64) {
+	C.rocksdb_options_set_max_total_wal_size(opts.c, C.uint64_t(value))
+}
+
 // SetCompression sets the compression algorithm.
 // Default: SnappyCompression, which gives lightweight but fast
 // compression.
@@ -481,6 +500,15 @@ func (opts *Options) SetMaxBytesForLevelBase(value uint64) {
 // Default: 10
 func (opts *Options) SetMaxBytesForLevelMultiplier(value float64) {
 	C.rocksdb_options_set_max_bytes_for_level_multiplier(opts.c, C.double(value))
+}
+
+// SetMaxCompactionBytes sets the maximum number of bytes in all compacted files.
+// We try to limit number of bytes in one compaction to be lower than this
+// threshold. But it's not guaranteed.
+// Value 0 will be sanitized.
+// Default: result.target_file_size_base * 25
+func (opts *Options) SetMaxCompactionBytes(value uint64) {
+	C.rocksdb_options_set_max_compaction_bytes(opts.c, C.uint64_t(value))
 }
 
 // SetMaxBytesForLevelMultiplierAdditional sets different max-size multipliers
