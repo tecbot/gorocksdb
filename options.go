@@ -511,6 +511,24 @@ func (opts *Options) SetMaxCompactionBytes(value uint64) {
 	C.rocksdb_options_set_max_compaction_bytes(opts.c, C.uint64_t(value))
 }
 
+// SetSoftPendingCompactionBytesLimit sets the threshold at which
+// all writes will be slowed down to at least delayed_write_rate if estimated
+// bytes needed to be compaction exceed this threshold.
+//
+// Default: 64GB
+func (opts *Options) SetSoftPendingCompactionBytesLimit(value uint64) {
+	C.rocksdb_options_set_soft_pending_compaction_bytes_limit(opts.c, C.size_t(value))
+}
+
+// SetHardPendingCompactionBytesLimit sets the bytes threshold at which
+// all writes are stopped if estimated bytes needed to be compaction exceed
+// this threshold.
+//
+// Default: 256GB
+func (opts *Options) SetHardPendingCompactionBytesLimit(value uint64) {
+	C.rocksdb_options_set_hard_pending_compaction_bytes_limit(opts.c, C.size_t(value))
+}
+
 // SetMaxBytesForLevelMultiplierAdditional sets different max-size multipliers
 // for different levels.
 //
@@ -746,7 +764,7 @@ func (opts *Options) SetAllowMmapReads(value bool) {
 }
 
 // SetAllowMmapWrites enable/disable mmap writes for writing sst tables.
-// Default: true
+// Default: false
 func (opts *Options) SetAllowMmapWrites(value bool) {
 	C.rocksdb_options_set_allow_mmap_writes(opts.c, boolToChar(value))
 }
@@ -791,6 +809,20 @@ func (opts *Options) SetStatsDumpPeriodSec(value uint) {
 // Default: true
 func (opts *Options) SetAdviseRandomOnOpen(value bool) {
 	C.rocksdb_options_set_advise_random_on_open(opts.c, boolToChar(value))
+}
+
+// SetDbWriteBufferSize sets the amount of data to build up
+// in memtables across all column families before writing to disk.
+//
+// This is distinct from write_buffer_size, which enforces a limit
+// for a single memtable.
+//
+// This feature is disabled by default. Specify a non-zero value
+// to enable it.
+//
+// Default: 0 (disabled)
+func (opts *Options) SetDbWriteBufferSize(value int) {
+	C.rocksdb_options_set_db_write_buffer_size(opts.c, C.size_t(value))
 }
 
 // SetAccessHintOnCompactionStart specifies the file access pattern
@@ -876,6 +908,21 @@ func (opts *Options) SetInplaceUpdateSupport(value bool) {
 // Default: 10000, if inplace_update_support = true, else 0.
 func (opts *Options) SetInplaceUpdateNumLocks(value int) {
 	C.rocksdb_options_set_inplace_update_num_locks(opts.c, C.size_t(value))
+}
+
+// SetMemtableHugePageSize sets the page size for huge page for
+// arena used by the memtable.
+// If <=0, it won't allocate from huge page but from malloc.
+// Users are responsible to reserve huge pages for it to be allocated. For
+// example:
+//      sysctl -w vm.nr_hugepages=20
+// See linux doc Documentation/vm/hugetlbpage.txt
+// If there isn't enough free huge page available, it will fall back to
+// malloc.
+//
+// Dynamically changeable through SetOptions() API
+func (opts *Options) SetMemtableHugePageSize(value int) {
+	C.rocksdb_options_set_memtable_huge_page_size(opts.c, C.size_t(value))
 }
 
 // SetBloomLocality sets the bloom locality.
