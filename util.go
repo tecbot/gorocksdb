@@ -52,9 +52,10 @@ func cByteSlice(b []byte) *C.char {
 }
 
 // stringToChar returns *C.char from string.
+// The C string is allocated in the C heap using malloc. It is the
+// caller's responsibility to arrange for it to be freed.
 func stringToChar(s string) *C.char {
-	ptrStr := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	return (*C.char)(unsafe.Pointer(ptrStr.Data))
+	return C.CString(s)
 }
 
 // charSlice converts a C array of *char to a []*C.char.
