@@ -380,7 +380,13 @@ func (db *DB) NewIteratorCF(opts *ReadOptions, cf *ColumnFamilyHandle) *Iterator
 // NewSnapshot creates a new snapshot of the database.
 func (db *DB) NewSnapshot() *Snapshot {
 	cSnap := C.rocksdb_create_snapshot(db.c)
-	return NewNativeSnapshot(cSnap, db.c)
+	return NewNativeSnapshot(cSnap)
+}
+
+// ReleaseSnapshot releases the snapshot and its resources.
+func (db *DB) ReleaseSnapshot(snapshot *Snapshot) {
+	C.rocksdb_release_snapshot(db.c, snapshot.c)
+	snapshot.c = nil
 }
 
 // GetProperty returns the value of a database property.
@@ -586,6 +592,81 @@ func (db *DB) DeleteFile(name string) {
 	cName := C.CString(name)
 	defer C.free(unsafe.Pointer(cName))
 	C.rocksdb_delete_file(db.c, cName)
+}
+
+// IngestExternalFile loads a list of external SST files.
+func (db *DB) IngestExternalFile(filePaths []string, opts *IngestExternalFileOptions) error {
+	cFilePaths := make([]*C.char, len(filePaths))
+	for i, s := range filePaths {
+		cFilePaths[i] = C.CString(s)
+	}
+	defer func() {
+		for _, s := range cFilePaths {
+			C.free(unsafe.Pointer(s))
+		}
+	}()
+
+	var cErr *C.char
+
+	C.rocksdb_ingest_external_file(
+		db.c,
+		&cFilePaths[0],
+		C.size_t(len(filePaths)),
+		opts.c,
+		&cErr,
+	)
+
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
+// IngestExternalFileCF loads a list of external SST files for a column family.
+func (db *DB) IngestExternalFileCF(handle *ColumnFamilyHandle, filePaths []string, opts *IngestExternalFileOptions) error {
+	cFilePaths := make([]*C.char, len(filePaths))
+	for i, s := range filePaths {
+		cFilePaths[i] = C.CString(s)
+	}
+	defer func() {
+		for _, s := range cFilePaths {
+			C.free(unsafe.Pointer(s))
+		}
+	}()
+
+	var cErr *C.char
+
+	C.rocksdb_ingest_external_file_cf(
+		db.c,
+		handle.c,
+		&cFilePaths[0],
+		C.size_t(len(filePaths)),
+		opts.c,
+		&cErr,
+	)
+
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
+// NewCheckpoint creates a new Checkpoint for this db.
+func (db *DB) NewCheckpoint() (*Checkpoint, error) {
+	var (
+		cErr *C.char
+	)
+	cCheckpoint := C.rocksdb_checkpoint_object_create(
+		db.c, &cErr,
+	)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+
+	return NewNativeCheckpoint(cCheckpoint), nil
 }
 
 // Close closes the database.

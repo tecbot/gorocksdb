@@ -100,6 +100,13 @@ func (iter *Iterator) Seek(key []byte) {
 	C.rocksdb_iter_seek(iter.c, cKey, C.size_t(len(key)))
 }
 
+// SeekForPrev moves the iterator to the last key that less than or equal
+// to the target key, in contrast with Seek.
+func (iter *Iterator) SeekForPrev(key []byte) {
+	cKey := byteToChar(key)
+	C.rocksdb_iter_seek_for_prev(iter.c, cKey, C.size_t(len(key)))
+}
+
 // Err returns nil if no errors happened during iteration, or the actual
 // error otherwise.
 func (iter *Iterator) Err() error {
