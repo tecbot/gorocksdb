@@ -1,7 +1,6 @@
 package gorocksdb
 
 // #include <stdlib.h>
-// #include "rocksdb/c.h"
 import "C"
 import "unsafe"
 
@@ -37,7 +36,7 @@ func (s *Slice) Size() int {
 // Free frees the slice data.
 func (s *Slice) Free() {
 	if !s.freed {
-		C.rocksdb_free(unsafe.Pointer(s.data))
+		C.free(unsafe.Pointer(s.data))
 		s.freed = true
 	}
 }

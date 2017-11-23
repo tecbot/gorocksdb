@@ -244,7 +244,7 @@ func (db *DB) GetBytes(opts *ReadOptions, key []byte) ([]byte, error) {
 	if cValue == nil {
 		return nil, nil
 	}
-	defer C.rocksdb_free(unsafe.Pointer(cValue))
+	defer C.free(unsafe.Pointer(cValue))
 	return C.GoBytes(unsafe.Pointer(cValue), C.int(cValLen)), nil
 }
 
@@ -394,7 +394,7 @@ func (db *DB) GetProperty(propName string) string {
 	cprop := C.CString(propName)
 	defer C.free(unsafe.Pointer(cprop))
 	cValue := C.rocksdb_property_value(db.c, cprop)
-	defer C.rocksdb_free(unsafe.Pointer(cValue))
+	defer C.free(unsafe.Pointer(cValue))
 	return C.GoString(cValue)
 }
 
@@ -617,7 +617,7 @@ func (db *DB) IngestExternalFile(filePaths []string, opts *IngestExternalFileOpt
 	)
 
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return errors.New(C.GoString(cErr))
 	}
 	return nil
@@ -647,7 +647,7 @@ func (db *DB) IngestExternalFileCF(handle *ColumnFamilyHandle, filePaths []strin
 	)
 
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return errors.New(C.GoString(cErr))
 	}
 	return nil
@@ -662,7 +662,7 @@ func (db *DB) NewCheckpoint() (*Checkpoint, error) {
 		db.c, &cErr,
 	)
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
 	}
 

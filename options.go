@@ -564,7 +564,7 @@ func (opts *Options) SetUseFsync(value bool) {
 // Default: empty
 func (opts *Options) SetDbLogDir(value string) {
 	cvalue := C.CString(value)
-	defer C.rocksdb_free(unsafe.Pointer(cvalue))
+	defer C.free(unsafe.Pointer(cvalue))
 	C.rocksdb_options_set_db_log_dir(opts.c, cvalue)
 }
 
@@ -576,7 +576,7 @@ func (opts *Options) SetDbLogDir(value string) {
 // Default: empty
 func (opts *Options) SetWalDir(value string) {
 	cvalue := C.CString(value)
-	defer C.rocksdb_free(unsafe.Pointer(cvalue))
+	defer C.free(unsafe.Pointer(cvalue))
 	C.rocksdb_options_set_wal_dir(opts.c, cvalue)
 }
 
