@@ -450,15 +450,9 @@ func (db *DB) GetApproximateSizes(ranges []Range) []uint64 {
 	cStartLens := make([]C.size_t, len(ranges))
 	cLimitLens := make([]C.size_t, len(ranges))
 	for i, r := range ranges {
-		start := C.copy_bytes(unsafe.Pointer(&r.Start[0]), C.size_t(len(r.Start)))
+		start, limit := makeCRange(r)
 		defer C.free(start)
-
-		limit := C.copy_bytes(unsafe.Pointer(&r.Limit[0]), C.size_t(len(r.Limit)))
 		defer C.free(limit)
-
-		if start == nil || limit == nil {
-			panic("out of memory")
-		}
 
 		cStarts[i] = (*C.char)(start)
 		cStartLens[i] = C.size_t(len(r.Start))
@@ -494,10 +488,8 @@ func (db *DB) GetApproximateSizesCF(cf *ColumnFamilyHandle, ranges []Range) []ui
 	cStartLens := make([]C.size_t, len(ranges))
 	cLimitLens := make([]C.size_t, len(ranges))
 	for i, r := range ranges {
-		start := C.CBytes(r.Start)
+		start, limit := makeCRange(r)
 		defer C.free(start)
-
-		limit := C.CBytes(r.Limit)
 		defer C.free(limit)
 
 		cStarts[i] = (*C.char)(start)
@@ -517,6 +509,17 @@ func (db *DB) GetApproximateSizesCF(cf *ColumnFamilyHandle, ranges []Range) []ui
 		(*C.uint64_t)(&sizes[0]))
 
 	return sizes
+}
+
+// Make a copy of a Range that can be passed to a C function via cgo.
+// The memory is allocated using malloc and must be freed by the caller.
+func makeCRange(r Range) (unsafe.Pointer, unsafe.Pointer) {
+	start := C.copy_bytes(unsafe.Pointer(&r.Start[0]), C.size_t(len(r.Start)))
+	limit := C.copy_bytes(unsafe.Pointer(&r.Limit[0]), C.size_t(len(r.Limit)))
+	if start == nil || limit == nil {
+		panic("out of memory")
+	}
+	return start, limit
 }
 
 // LiveFileMetadata is a metadata which is associated with each SST file.
