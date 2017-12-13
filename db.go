@@ -2,6 +2,7 @@ package gorocksdb
 
 // #include <stdlib.h>
 // #include "rocksdb/c.h"
+// #include "gorocksdb.h"
 import "C"
 import (
 	"errors"
@@ -449,11 +450,15 @@ func (db *DB) GetApproximateSizes(ranges []Range) []uint64 {
 	cStartLens := make([]C.size_t, len(ranges))
 	cLimitLens := make([]C.size_t, len(ranges))
 	for i, r := range ranges {
-		start := C.CBytes(r.Start)
+		start := C.copy_bytes(unsafe.Pointer(&r.Start[0]), C.size_t(len(r.Start)))
 		defer C.free(start)
 
-		limit := C.CBytes(r.Limit)
+		limit := C.copy_bytes(unsafe.Pointer(&r.Limit[0]), C.size_t(len(r.Limit)))
 		defer C.free(limit)
+
+		if start == nil || limit == nil {
+			panic("out of memory")
+		}
 
 		cStarts[i] = (*C.char)(start)
 		cStartLens[i] = C.size_t(len(r.Start))
