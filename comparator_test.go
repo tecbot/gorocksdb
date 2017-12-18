@@ -1,7 +1,6 @@
 package gorocksdb
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/facebookgo/ensure"
@@ -9,7 +8,7 @@ import (
 
 func TestComparator(t *testing.T) {
 	db := newTestDB(t, "TestComparator", func(opts *Options) {
-		opts.SetComparator(&bytesReverseComparator{})
+		opts.SetComparator(NewMockBytesReverseComparator())
 	})
 	defer db.Close()
 
@@ -37,11 +36,4 @@ func TestComparator(t *testing.T) {
 
 	// ensure that the order is correct
 	ensure.DeepEqual(t, actualKeys, givenKeys)
-}
-
-type bytesReverseComparator struct{}
-
-func (cmp *bytesReverseComparator) Name() string { return "gorocksdb.bytes-reverse" }
-func (cmp *bytesReverseComparator) Compare(a, b []byte) int {
-	return bytes.Compare(a, b) * -1
 }

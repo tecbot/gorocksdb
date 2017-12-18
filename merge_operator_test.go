@@ -13,14 +13,13 @@ func TestMergeOperator(t *testing.T) {
 		givenVal2   = []byte("bar")
 		givenMerged = []byte("foobar")
 	)
-	merger := &mockMergeOperator{
-		fullMerge: func(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
-			ensure.DeepEqual(&fatalAsError{t}, key, givenKey)
-			ensure.DeepEqual(&fatalAsError{t}, existingValue, givenVal1)
-			ensure.DeepEqual(&fatalAsError{t}, operands, [][]byte{givenVal2})
-			return givenMerged, true
-		},
-	}
+	merger := NewMockMergeOperator(func(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
+		ensure.DeepEqual(&fatalAsError{t}, key, givenKey)
+		ensure.DeepEqual(&fatalAsError{t}, existingValue, givenVal1)
+		ensure.DeepEqual(&fatalAsError{t}, operands, [][]byte{givenVal2})
+		return givenMerged, true
+	}, nil)
+
 	db := newTestDB(t, "TestMergeOperator", func(opts *Options) {
 		opts.SetMergeOperator(merger)
 	})
@@ -38,17 +37,4 @@ func TestMergeOperator(t *testing.T) {
 	defer v1.Free()
 	ensure.Nil(t, err)
 	ensure.DeepEqual(t, v1.Data(), givenMerged)
-}
-
-type mockMergeOperator struct {
-	fullMerge    func(key, existingValue []byte, operands [][]byte) ([]byte, bool)
-	partialMerge func(key, leftOperand, rightOperand []byte) ([]byte, bool)
-}
-
-func (m *mockMergeOperator) Name() string { return "gorocksdb.test" }
-func (m *mockMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
-	return m.fullMerge(key, existingValue, operands)
-}
-func (m *mockMergeOperator) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) {
-	return m.partialMerge(key, leftOperand, rightOperand)
 }

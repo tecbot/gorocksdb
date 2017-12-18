@@ -15,18 +15,16 @@ func TestCompactionFilter(t *testing.T) {
 		deleteKey    = []byte("delete")
 	)
 	db := newTestDB(t, "TestCompactionFilter", func(opts *Options) {
-		opts.SetCompactionFilter(&mockCompactionFilter{
-			filter: func(level int, key, val []byte) (remove bool, newVal []byte) {
-				if bytes.Equal(key, changeKey) {
-					return false, changeValNew
-				}
-				if bytes.Equal(key, deleteKey) {
-					return true, val
-				}
-				t.Errorf("key %q not expected during compaction", key)
-				return false, nil
-			},
-		})
+		opts.SetCompactionFilter(NewMockCompactionFilter(func(level int, key, val []byte) (remove bool, newVal []byte) {
+			if bytes.Equal(key, changeKey) {
+				return false, changeValNew
+			}
+			if bytes.Equal(key, deleteKey) {
+				return true, val
+			}
+			t.Errorf("key %q not expected during compaction", key)
+			return false, nil
+		}))
 	})
 	defer db.Close()
 
@@ -49,13 +47,4 @@ func TestCompactionFilter(t *testing.T) {
 	v2, err := db.Get(ro, deleteKey)
 	ensure.Nil(t, err)
 	ensure.True(t, v2.Data() == nil)
-}
-
-type mockCompactionFilter struct {
-	filter func(level int, key, val []byte) (remove bool, newVal []byte)
-}
-
-func (m *mockCompactionFilter) Name() string { return "gorocksdb.test" }
-func (m *mockCompactionFilter) Filter(level int, key, val []byte) (bool, []byte) {
-	return m.filter(level, key, val)
 }
