@@ -16,7 +16,7 @@ type SliceTransform interface {
 
 	// Return the name of this transformation.
 	Name() string
-	CName() *C.Char
+	CName() *C.char
 }
 
 // NewFixedPrefixTransform creates a new fixed prefix transform.
@@ -31,14 +31,14 @@ func NewNativeSliceTransform(c *C.rocksdb_slicetransform_t) SliceTransform {
 
 type nativeSliceTransform struct {
 	c     *C.rocksdb_slicetransform_t
-	cname *C.Char
+	cname *C.char
 }
 
 func (st nativeSliceTransform) Transform(src []byte) []byte { return nil }
 func (st nativeSliceTransform) InDomain(src []byte) bool    { return false }
 func (st nativeSliceTransform) InRange(src []byte) bool     { return false }
 func (st nativeSliceTransform) Name() string                { return "" }
-func (st nativeSliceTransform) CName() *C.Char              { return st.cname }
+func (st nativeSliceTransform) CName() *C.char              { return st.cname }
 
 // Hold references to slice transforms.
 var sliceTransforms = NewCOWList()

@@ -23,7 +23,7 @@ type CompactionFilter interface {
 
 	// The name of the compaction filter, for logging
 	Name() string
-	CName() *C.Char
+	CName() *C.char
 }
 
 // NewNativeCompactionFilter creates a CompactionFilter object.
@@ -33,14 +33,14 @@ func NewNativeCompactionFilter(c *C.rocksdb_compactionfilter_t) CompactionFilter
 
 type nativeCompactionFilter struct {
 	c     *C.rocksdb_compactionfilter_t
-	cname *C.Char
+	cname *C.char
 }
 
 func (c nativeCompactionFilter) Filter(level int, key, val []byte) (remove bool, newVal []byte) {
 	return false, nil
 }
 func (c nativeCompactionFilter) Name() string   { return "" }
-func (c nativeCompactionFilter) CName() *C.Char { return c.cname }
+func (c nativeCompactionFilter) CName() *C.char { return c.cname }
 
 // Hold references to compaction filters.
 var compactionFilters = NewCOWList()

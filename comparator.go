@@ -14,7 +14,7 @@ type Comparator interface {
 
 	// The name of the comparator.
 	Name() string
-	CName() *C.Char
+	CName() *C.char
 }
 
 // NewNativeComparator creates a Comparator object.
@@ -24,12 +24,12 @@ func NewNativeComparator(c *C.rocksdb_comparator_t) Comparator {
 
 type nativeComparator struct {
 	c     *C.rocksdb_comparator_t
-	cname *C.Char
+	cname *C.char
 }
 
 func (c nativeComparator) Compare(a, b []byte) int { return 0 }
 func (c nativeComparator) Name() string            { return "" }
-func (c nativeComparator) CName() *C.Char          { return c.cname }
+func (c nativeComparator) CName() *C.char          { return c.cname }
 
 // Hold references to comperators.
 var comperators = NewCOWList()

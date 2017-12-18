@@ -19,7 +19,7 @@ type FilterPolicy interface {
 
 	// Return the name of this policy.
 	Name() string
-	CName() *C.Char
+	CName() *C.char
 }
 
 // NewNativeFilterPolicy creates a FilterPolicy object.
@@ -29,13 +29,13 @@ func NewNativeFilterPolicy(c *C.rocksdb_filterpolicy_t) FilterPolicy {
 
 type nativeFilterPolicy struct {
 	c     *C.rocksdb_filterpolicy_t
-	cname *C.Char
+	cname *C.char
 }
 
 func (fp nativeFilterPolicy) CreateFilter(keys [][]byte) []byte          { return nil }
 func (fp nativeFilterPolicy) KeyMayMatch(key []byte, filter []byte) bool { return false }
 func (fp nativeFilterPolicy) Name() string                               { return "" }
-func (fp nativeFilterPolicy) CName() *C.Char                             { return fp.cname }
+func (fp nativeFilterPolicy) CName() *C.char                             { return fp.cname }
 
 // NewBloomFilter returns a new filter policy that uses a bloom filter with approximately
 // the specified number of bits per key.  A good value for bits_per_key
