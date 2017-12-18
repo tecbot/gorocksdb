@@ -23,19 +23,18 @@ func TestFilterPolicy(t *testing.T) {
 		createFilterCalled = false
 		keyMayMatchCalled  = false
 	)
-	policy := &mockFilterPolicy{
-		createFilter: func(keys [][]byte) []byte {
+	policy := NewMockFilterPolicy(
+		func(keys [][]byte) []byte {
 			createFilterCalled = true
 			ensure.DeepEqual(&fatalAsError{t}, keys, givenKeys)
 			return givenFilter
 		},
-		keyMayMatch: func(key, filter []byte) bool {
+		func(key, filter []byte) bool {
 			keyMayMatchCalled = true
 			ensure.DeepEqual(&fatalAsError{t}, key, givenKeys[0])
 			ensure.DeepEqual(&fatalAsError{t}, filter, givenFilter)
 			return true
-		},
-	}
+		})
 
 	db := newTestDB(t, "TestFilterPolicy", func(opts *Options) {
 		blockOpts := NewDefaultBlockBasedTableOptions()
@@ -60,17 +59,4 @@ func TestFilterPolicy(t *testing.T) {
 	defer v1.Free()
 	ensure.Nil(t, err)
 	ensure.True(t, keyMayMatchCalled)
-}
-
-type mockFilterPolicy struct {
-	createFilter func(keys [][]byte) []byte
-	keyMayMatch  func(key, filter []byte) bool
-}
-
-func (m *mockFilterPolicy) Name() string { return "gorocksdb.test" }
-func (m *mockFilterPolicy) CreateFilter(keys [][]byte) []byte {
-	return m.createFilter(keys)
-}
-func (m *mockFilterPolicy) KeyMayMatch(key, filter []byte) bool {
-	return m.keyMayMatch(key, filter)
 }

@@ -14,19 +14,22 @@ type Comparator interface {
 
 	// The name of the comparator.
 	Name() string
+	CName() *C.char
 }
 
 // NewNativeComparator creates a Comparator object.
 func NewNativeComparator(c *C.rocksdb_comparator_t) Comparator {
-	return nativeComparator{c}
+	return nativeComparator{c, C.CString("")}
 }
 
 type nativeComparator struct {
-	c *C.rocksdb_comparator_t
+	c     *C.rocksdb_comparator_t
+	cname *C.char
 }
 
 func (c nativeComparator) Compare(a, b []byte) int { return 0 }
 func (c nativeComparator) Name() string            { return "" }
+func (c nativeComparator) CName() *C.char          { return c.cname }
 
 // Hold references to comperators.
 var comperators = NewCOWList()
@@ -44,5 +47,5 @@ func gorocksdb_comparator_compare(idx int, cKeyA *C.char, cKeyALen C.size_t, cKe
 
 //export gorocksdb_comparator_name
 func gorocksdb_comparator_name(idx int) *C.char {
-	return stringToChar(comperators.Get(idx).(Comparator).Name())
+	return comperators.Get(idx).(Comparator).CName()
 }
