@@ -45,15 +45,17 @@ type MergeOperator interface {
 
 	// The name of the MergeOperator.
 	Name() string
+	CName() *C.Char
 }
 
 // NewNativeMergeOperator creates a MergeOperator object.
 func NewNativeMergeOperator(c *C.rocksdb_mergeoperator_t) MergeOperator {
-	return nativeMergeOperator{c}
+	return nativeMergeOperator{c, C.CString("")}
 }
 
 type nativeMergeOperator struct {
-	c *C.rocksdb_mergeoperator_t
+	c     *C.rocksdb_mergeoperator_t
+	cname *C.Char
 }
 
 func (mo nativeMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
@@ -62,7 +64,8 @@ func (mo nativeMergeOperator) FullMerge(key, existingValue []byte, operands [][]
 func (mo nativeMergeOperator) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) {
 	return nil, false
 }
-func (mo nativeMergeOperator) Name() string { return "" }
+func (mo nativeMergeOperator) Name() string   { return "" }
+func (mo nativeMergeOperator) CName() *C.Char { return mo.cname }
 
 // Hold references to merge operators.
 var mergeOperators = NewCOWList()
@@ -123,5 +126,5 @@ func gorocksdb_mergeoperator_partial_merge_multi(idx int, cKey *C.char, cKeyLen 
 
 //export gorocksdb_mergeoperator_name
 func gorocksdb_mergeoperator_name(idx int) *C.char {
-	return stringToChar(mergeOperators.Get(idx).(MergeOperator).Name())
+	return mergeOperators.Get(idx).(MergeOperator).CName()
 }
