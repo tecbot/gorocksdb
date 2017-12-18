@@ -48,3 +48,8 @@ func TestCompactionFilter(t *testing.T) {
 	ensure.Nil(t, err)
 	ensure.True(t, v2.Data() == nil)
 }
+
+func TestCompactionFilterName(t *testing.T) {
+	cf := NewMockCompactionFilter(nil)
+	ensure.DeepEqual(t, cf.Name(), GetCName(cf.CName()))
+}

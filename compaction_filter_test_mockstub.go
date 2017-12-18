@@ -17,3 +17,5 @@ func (m *mockCompactionFilter) CName() *C.char { return C.CString("gorocksdb.tes
 func (m *mockCompactionFilter) Filter(level int, key, val []byte) (bool, []byte) {
 	return m.filter(level, key, val)
 }
+
+func GetCName(c *C.char) string { return C.GoString(c) }
