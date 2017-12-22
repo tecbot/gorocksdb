@@ -2,7 +2,10 @@ package gorocksdb
 
 // #include "rocksdb/c.h"
 import "C"
-import "io"
+import (
+	"errors"
+	"io"
+)
 
 // WriteBatch is a batching of Puts, Merges and Deletes.
 type WriteBatch struct {
@@ -102,14 +105,26 @@ type WriteBatchRecordType byte
 
 // Types of batch records.
 const (
-	WriteBatchRecordTypeDeletion WriteBatchRecordType = 0x0
-	WriteBatchRecordTypeValue    WriteBatchRecordType = 0x1
-	WriteBatchRecordTypeMerge    WriteBatchRecordType = 0x2
-	WriteBatchRecordTypeLogData  WriteBatchRecordType = 0x3
+	WriteBatchRecordTypeDeletion   WriteBatchRecordType = 0x0
+	WriteBatchRecordTypeValue      WriteBatchRecordType = 0x1
+	WriteBatchRecordTypeMerge      WriteBatchRecordType = 0x2
+	WriteBatchRecordTypeLogData    WriteBatchRecordType = 0x3
+	WriteBatchRecordTypeCFDeletion WriteBatchRecordType = 0x4
+	WriteBatchRecordTypeCFValue    WriteBatchRecordType = 0x5
+	WriteBatchRecordTypeCFMerge    WriteBatchRecordType = 0x6
+	WriteBatchRecordTypeSingleDeletion WriteBatchRecordType = 0x7
+	WriteBatchRecordTypeCFSingleDeletion WriteBatchRecordType = 0x8
+	WriteBatchRecordTypeNoop WriteBatchRecordType = 0xD
+	WriteBatchRecordTypeBeginPrepareXID WriteBatchRecordType = 0x9
+	WriteBatchRecordTypeEndPrepareXID WriteBatchRecordType = 0xA
+	WriteBatchRecordTypeCommitXID WriteBatchRecordType = 0xB
+	WriteBatchRecordTypeRollbackXID WriteBatchRecordType = 0xC
+	WriteBatchRecordTypeNotUsed WriteBatchRecordType = 0x7F
 )
 
 // WriteBatchRecord represents a record inside a WriteBatch.
 type WriteBatchRecord struct {
+	CF    int
 	Key   []byte
 	Value []byte
 	Type  WriteBatchRecordType
@@ -133,32 +148,35 @@ func (iter *WriteBatchIterator) Next() bool {
 	iter.record.Value = nil
 
 	// parse the record type
-	recordType := WriteBatchRecordType(iter.data[0])
-	iter.record.Type = recordType
-	iter.data = iter.data[1:]
+	iter.record.Type = iter.decodeRecType()
 
-	// parse the key
-	x, n := iter.decodeVarint(iter.data)
-	if n == 0 {
-		iter.err = io.ErrShortBuffer
-		return false
-	}
-	k := n + int(x)
-	iter.record.Key = iter.data[n:k]
-	iter.data = iter.data[k:]
-
-	// parse the data
-	if recordType == WriteBatchRecordTypeValue || recordType == WriteBatchRecordTypeMerge {
-		x, n := iter.decodeVarint(iter.data)
-		if n == 0 {
-			iter.err = io.ErrShortBuffer
-			return false
+	switch iter.record.Type {
+	case WriteBatchRecordTypeDeletion, WriteBatchRecordTypeSingleDeletion,
+		WriteBatchRecordTypeBeginPrepareXID, WriteBatchRecordTypeCommitXID,
+		WriteBatchRecordTypeRollbackXID:
+		iter.record.Key = iter.decodeSlice()
+	case WriteBatchRecordTypeValue, WriteBatchRecordTypeMerge:
+		iter.record.Key = iter.decodeSlice()
+		if iter.err == nil {
+			iter.record.Value = iter.decodeSlice()
 		}
-		k := n + int(x)
-		iter.record.Value = iter.data[n:k]
-		iter.data = iter.data[k:]
+	case WriteBatchRecordTypeCFDeletion, WriteBatchRecordTypeCFValue,
+		WriteBatchRecordTypeCFMerge, WriteBatchRecordTypeCFSingleDeletion:
+		iter.record.CF = int(iter.decodeVarint())
+		if iter.err == nil {
+			iter.record.Key = iter.decodeSlice()
+		}
+		if iter.err == nil {
+			iter.record.Value = iter.decodeSlice()
+		}
+	case WriteBatchRecordTypeEndPrepareXID, WriteBatchRecordTypeNoop,
+		WriteBatchRecordTypeNotUsed:
+	default:
+		iter.err = errors.New("unsupported wal record type")
 	}
-	return true
+
+	return iter.err == nil
+
 }
 
 // Record returns the current record.
@@ -171,19 +189,45 @@ func (iter *WriteBatchIterator) Error() error {
 	return iter.err
 }
 
-func (iter *WriteBatchIterator) decodeVarint(buf []byte) (x uint64, n int) {
-	// x, n already 0
-	for shift := uint(0); shift < 64; shift += 7 {
-		if n >= len(buf) {
-			return 0, 0
-		}
-		b := uint64(buf[n])
+func (iter *WriteBatchIterator) decodeSlice() []byte {
+	l := int(iter.decodeVarint())
+	if l > len(iter.data) {
+		iter.err = io.ErrShortBuffer
+	}
+	if iter.err != nil {
+		return []byte{}
+	}
+	ret := iter.data[:l]
+	iter.data = iter.data[l:]
+	return ret
+}
+
+func (iter *WriteBatchIterator) decodeRecType() WriteBatchRecordType {
+	if len(iter.data) == 0 {
+		iter.err = io.ErrShortBuffer
+		return WriteBatchRecordTypeNotUsed
+	}
+	t := iter.data[0]
+	iter.data = iter.data[1:]
+	return WriteBatchRecordType(t)
+}
+
+func (iter *WriteBatchIterator) decodeVarint() uint64 {
+	var n int
+	var x uint64
+	for shift := uint(0); shift < 64 && n < len(iter.data); shift += 7 {
+		b := uint64(iter.data[n])
 		n++
 		x |= (b & 0x7F) << shift
 		if (b & 0x80) == 0 {
-			return x, n
+			iter.data = iter.data[n:]
+			return x
 		}
 	}
-	// The number is too large to represent in a 64-bit value.
-	return 0, 0
+	if n == len(iter.data) {
+		iter.err = io.ErrShortBuffer
+	} else {
+		iter.err = errors.New("malformed varint")
+	}
+	return 0
 }
