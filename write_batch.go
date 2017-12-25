@@ -132,7 +132,6 @@ type WriteBatchRecord struct {
 	CF    int
 	Key   []byte
 	Value []byte
-	Blob  []byte
 	Type  WriteBatchRecordType
 }
 
@@ -153,7 +152,6 @@ func (iter *WriteBatchIterator) Next() bool {
 	iter.record.CF = 0
 	iter.record.Key = nil
 	iter.record.Value = nil
-	iter.record.Blob = nil
 
 	// parse the record type
 	iter.record.Type = iter.decodeRecType()
@@ -192,7 +190,7 @@ func (iter *WriteBatchIterator) Next() bool {
 			iter.record.Value = iter.decodeSlice()
 		}
 	case WriteBatchLogDataRecord:
-		iter.record.Blob = iter.decodeSlice()
+		iter.record.Value = iter.decodeSlice()
 	case
 		WriteBatchNoopRecord,
 		WriteBatchBeginPrepareXIDRecord,
@@ -201,7 +199,7 @@ func (iter *WriteBatchIterator) Next() bool {
 		WriteBatchEndPrepareXIDRecord,
 		WriteBatchCommitXIDRecord,
 		WriteBatchRollbackXIDRecord:
-		iter.record.Blob = iter.decodeSlice()
+		iter.record.Value = iter.decodeSlice()
 	default:
 		iter.err = errors.New("unsupported wal record type")
 	}
