@@ -105,21 +105,26 @@ type WriteBatchRecordType byte
 
 // Types of batch records.
 const (
-	WriteBatchRecordTypeDeletion   WriteBatchRecordType = 0x0
-	WriteBatchRecordTypeValue      WriteBatchRecordType = 0x1
-	WriteBatchRecordTypeMerge      WriteBatchRecordType = 0x2
-	WriteBatchRecordTypeLogData    WriteBatchRecordType = 0x3
-	WriteBatchRecordTypeCFDeletion WriteBatchRecordType = 0x4
-	WriteBatchRecordTypeCFValue    WriteBatchRecordType = 0x5
-	WriteBatchRecordTypeCFMerge    WriteBatchRecordType = 0x6
-	WriteBatchRecordTypeSingleDeletion WriteBatchRecordType = 0x7
-	WriteBatchRecordTypeCFSingleDeletion WriteBatchRecordType = 0x8
-	WriteBatchRecordTypeNoop WriteBatchRecordType = 0xD
-	WriteBatchRecordTypeBeginPrepareXID WriteBatchRecordType = 0x9
-	WriteBatchRecordTypeEndPrepareXID WriteBatchRecordType = 0xA
-	WriteBatchRecordTypeCommitXID WriteBatchRecordType = 0xB
-	WriteBatchRecordTypeRollbackXID WriteBatchRecordType = 0xC
-	WriteBatchRecordTypeNotUsed WriteBatchRecordType = 0x7F
+	WriteBatchDeletionRecord                 WriteBatchRecordType = 0x0
+	WriteBatchValueRecord                    WriteBatchRecordType = 0x1
+	WriteBatchMergeRecord                    WriteBatchRecordType = 0x2
+	WriteBatchLogDataRecord                  WriteBatchRecordType = 0x3
+	WriteBatchCFDeletionRecord               WriteBatchRecordType = 0x4
+	WriteBatchCFValueRecord                  WriteBatchRecordType = 0x5
+	WriteBatchCFMergeRecord                  WriteBatchRecordType = 0x6
+	WriteBatchSingleDeletionRecord           WriteBatchRecordType = 0x7
+	WriteBatchCFSingleDeletionRecord         WriteBatchRecordType = 0x8
+	WriteBatchBeginPrepareXIDRecord          WriteBatchRecordType = 0x9
+	WriteBatchEndPrepareXIDRecord            WriteBatchRecordType = 0xA
+	WriteBatchCommitXIDRecord                WriteBatchRecordType = 0xB
+	WriteBatchRollbackXIDRecord              WriteBatchRecordType = 0xC
+	WriteBatchNoopRecord                     WriteBatchRecordType = 0xD
+	WriteBatchRangeDeletion                  WriteBatchRecordType = 0xF
+	WriteBatchCFRangeDeletion                WriteBatchRecordType = 0xE
+	WriteBatchCFBlobIndex                    WriteBatchRecordType = 0x10
+	WriteBatchBlobIndex                      WriteBatchRecordType = 0x11
+	WriteBatchBeginPersistedPrepareXIDRecord WriteBatchRecordType = 0x12
+	WriteBatchNotUsedRecord                  WriteBatchRecordType = 0x7F
 )
 
 // WriteBatchRecord represents a record inside a WriteBatch.
@@ -127,6 +132,7 @@ type WriteBatchRecord struct {
 	CF    int
 	Key   []byte
 	Value []byte
+	Blob  []byte
 	Type  WriteBatchRecordType
 }
 
@@ -144,24 +150,40 @@ func (iter *WriteBatchIterator) Next() bool {
 		return false
 	}
 	// reset the current record
+	iter.record.CF = 0
 	iter.record.Key = nil
 	iter.record.Value = nil
+	iter.record.Blob = nil
 
 	// parse the record type
 	iter.record.Type = iter.decodeRecType()
 
 	switch iter.record.Type {
-	case WriteBatchRecordTypeDeletion, WriteBatchRecordTypeSingleDeletion,
-		WriteBatchRecordTypeBeginPrepareXID, WriteBatchRecordTypeCommitXID,
-		WriteBatchRecordTypeRollbackXID:
+	case
+		WriteBatchDeletionRecord,
+		WriteBatchSingleDeletionRecord:
 		iter.record.Key = iter.decodeSlice()
-	case WriteBatchRecordTypeValue, WriteBatchRecordTypeMerge:
+	case
+		WriteBatchCFDeletionRecord,
+		WriteBatchCFSingleDeletionRecord:
+		iter.record.CF = int(iter.decodeVarint())
+		if iter.err == nil {
+			iter.record.Key = iter.decodeSlice()
+		}
+	case
+		WriteBatchValueRecord,
+		WriteBatchMergeRecord,
+		WriteBatchRangeDeletion,
+		WriteBatchBlobIndex:
 		iter.record.Key = iter.decodeSlice()
 		if iter.err == nil {
 			iter.record.Value = iter.decodeSlice()
 		}
-	case WriteBatchRecordTypeCFDeletion, WriteBatchRecordTypeCFValue,
-		WriteBatchRecordTypeCFMerge, WriteBatchRecordTypeCFSingleDeletion:
+	case
+		WriteBatchCFValueRecord,
+		WriteBatchCFRangeDeletion,
+		WriteBatchCFMergeRecord,
+		WriteBatchCFBlobIndex:
 		iter.record.CF = int(iter.decodeVarint())
 		if iter.err == nil {
 			iter.record.Key = iter.decodeSlice()
@@ -169,8 +191,17 @@ func (iter *WriteBatchIterator) Next() bool {
 		if iter.err == nil {
 			iter.record.Value = iter.decodeSlice()
 		}
-	case WriteBatchRecordTypeEndPrepareXID, WriteBatchRecordTypeNoop,
-		WriteBatchRecordTypeNotUsed:
+	case WriteBatchLogDataRecord:
+		iter.record.Blob = iter.decodeSlice()
+	case
+		WriteBatchNoopRecord,
+		WriteBatchBeginPrepareXIDRecord,
+		WriteBatchBeginPersistedPrepareXIDRecord:
+	case
+		WriteBatchEndPrepareXIDRecord,
+		WriteBatchCommitXIDRecord,
+		WriteBatchRollbackXIDRecord:
+		iter.record.Blob = iter.decodeSlice()
 	default:
 		iter.err = errors.New("unsupported wal record type")
 	}
@@ -205,7 +236,7 @@ func (iter *WriteBatchIterator) decodeSlice() []byte {
 func (iter *WriteBatchIterator) decodeRecType() WriteBatchRecordType {
 	if len(iter.data) == 0 {
 		iter.err = io.ErrShortBuffer
-		return WriteBatchRecordTypeNotUsed
+		return WriteBatchNotUsedRecord
 	}
 	t := iter.data[0]
 	iter.data = iter.data[1:]
