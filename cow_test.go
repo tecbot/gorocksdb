@@ -18,6 +18,16 @@ func TestCOWList(t *testing.T) {
 	ensure.DeepEqual(t, cl.Get(2), "!")
 }
 
+func TestTwoCOWLists(t *testing.T) {
+	clo := NewCOWList()
+	clname := NewCOWList()
+
+	clname.Append("hello")
+	idx := clo.Append("hello")
+
+	ensure.DeepEqual(t, clo.Get(idx), clname.Get(idx))
+}
+
 func TestCOWListMT(t *testing.T) {
 	cl := NewCOWList()
 	expectedRes := make([]int, 3)
