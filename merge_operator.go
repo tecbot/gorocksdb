@@ -66,8 +66,10 @@ func (mo nativeMergeOperator) Name() string { return "" }
 
 // Hold references to merge operators.
 var mergeOperators = NewCOWList()
+var mergeOperatorNames = NewCOWList()
 
 func registerMergeOperator(merger MergeOperator) int {
+	mergeOperatorNames.Append(C.CString(merger.Name()))
 	return mergeOperators.Append(merger)
 }
 
@@ -123,5 +125,5 @@ func gorocksdb_mergeoperator_partial_merge_multi(idx int, cKey *C.char, cKeyLen 
 
 //export gorocksdb_mergeoperator_name
 func gorocksdb_mergeoperator_name(idx int) *C.char {
-	return stringToChar(mergeOperators.Get(idx).(MergeOperator).Name())
+	return mergeOperatorNames.Get(idx).(*C.char)
 }

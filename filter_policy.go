@@ -51,8 +51,10 @@ func NewBloomFilter(bitsPerKey int) FilterPolicy {
 
 // Hold references to filter policies.
 var filterPolicies = NewCOWList()
+var filterPolicyNames = NewCOWList()
 
 func registerFilterPolicy(fp FilterPolicy) int {
+	filterPolicyNames.Append(C.CString(fp.Name()))
 	return filterPolicies.Append(fp)
 }
 
@@ -79,5 +81,5 @@ func gorocksdb_filterpolicy_key_may_match(idx int, cKey *C.char, cKeyLen C.size_
 
 //export gorocksdb_filterpolicy_name
 func gorocksdb_filterpolicy_name(idx int) *C.char {
-	return stringToChar(filterPolicies.Get(idx).(FilterPolicy).Name())
+	return filterPolicyNames.Get(idx).(*C.char)
 }

@@ -30,8 +30,10 @@ func (c nativeComparator) Name() string            { return "" }
 
 // Hold references to comperators.
 var comperators = NewCOWList()
+var comperatorNames = NewCOWList()
 
 func registerComperator(cmp Comparator) int {
+	comperatorNames.Append(C.CString(cmp.Name()))
 	return comperators.Append(cmp)
 }
 
@@ -44,5 +46,5 @@ func gorocksdb_comparator_compare(idx int, cKeyA *C.char, cKeyALen C.size_t, cKe
 
 //export gorocksdb_comparator_name
 func gorocksdb_comparator_name(idx int) *C.char {
-	return stringToChar(comperators.Get(idx).(Comparator).Name())
+	return comperatorNames.Get(idx).(*C.char)
 }

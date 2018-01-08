@@ -41,8 +41,10 @@ func (c nativeCompactionFilter) Name() string { return "" }
 
 // Hold references to compaction filters.
 var compactionFilters = NewCOWList()
+var compactionFilterNames = NewCOWList()
 
 func registerCompactionFilter(filter CompactionFilter) int {
+	compactionFilterNames.Append(C.CString(filter.Name()))
 	return compactionFilters.Append(filter)
 }
 
@@ -64,5 +66,5 @@ func gorocksdb_compactionfilter_filter(idx int, cLevel C.int, cKey *C.char, cKey
 
 //export gorocksdb_compactionfilter_name
 func gorocksdb_compactionfilter_name(idx int) *C.char {
-	return stringToChar(compactionFilters.Get(idx).(CompactionFilter).Name())
+	return compactionFilterNames.Get(idx).(*C.char)
 }

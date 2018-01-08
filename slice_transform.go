@@ -39,8 +39,10 @@ func (st nativeSliceTransform) Name() string                { return "" }
 
 // Hold references to slice transforms.
 var sliceTransforms = NewCOWList()
+var sliceTransformNames = NewCOWList()
 
 func registerSliceTransform(st SliceTransform) int {
+	sliceTransformNames.Append(C.CString(st.Name()))
 	return sliceTransforms.Append(st)
 }
 
@@ -68,5 +70,5 @@ func gorocksdb_slicetransform_in_range(idx int, cKey *C.char, cKeyLen C.size_t) 
 
 //export gorocksdb_slicetransform_name
 func gorocksdb_slicetransform_name(idx int) *C.char {
-	return stringToChar(sliceTransforms.Get(idx).(SliceTransform).Name())
+	return sliceTransformNames.Get(idx).(*C.char)
 }
