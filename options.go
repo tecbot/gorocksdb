@@ -1030,7 +1030,7 @@ func (opts *Options) SetBlockBasedTableFactory(value *BlockBasedTableOptions) {
 	C.rocksdb_options_set_block_based_table_factory(opts.c, value.c)
 }
 
-// SetAllowIngestBehind set allow_ingest_behind
+// SetAllowIngestBehind sets allow_ingest_behind
 // Set this option to true during creation of database if you want
 // to be able to ingest behind (call IngestExternalFile() skipping keys
 // that already exist, rather than overwriting matching keys).
