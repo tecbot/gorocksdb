@@ -66,11 +66,14 @@ func (mo nativeMergeOperator) Name() string { return "" }
 
 // Hold references to merge operators.
 var mergeOperators = NewCOWList()
-var mergeOperatorNames = NewCOWList()
+
+type mergeOperatorWrapper struct {
+	name          *C.char
+	mergeOperator MergeOperator
+}
 
 func registerMergeOperator(merger MergeOperator) int {
-	mergeOperatorNames.Append(C.CString(merger.Name()))
-	return mergeOperators.Append(merger)
+	return mergeOperators.Append(mergeOperatorWrapper{C.CString(merger.Name()), merger})
 }
 
 //export gorocksdb_mergeoperator_full_merge
@@ -84,7 +87,7 @@ func gorocksdb_mergeoperator_full_merge(idx int, cKey *C.char, cKeyLen C.size_t,
 		operands[i] = charToByte(rawOperands[i], len)
 	}
 
-	newValue, success := mergeOperators.Get(idx).(MergeOperator).FullMerge(key, existingValue, operands)
+	newValue, success := mergeOperators.Get(idx).(mergeOperatorWrapper).mergeOperator.FullMerge(key, existingValue, operands)
 	newValueLen := len(newValue)
 
 	*cNewValueLen = C.size_t(newValueLen)
@@ -106,7 +109,7 @@ func gorocksdb_mergeoperator_partial_merge_multi(idx int, cKey *C.char, cKeyLen 
 	var newValue []byte
 	success := true
 
-	merger := mergeOperators.Get(idx).(MergeOperator)
+	merger := mergeOperators.Get(idx).(mergeOperatorWrapper).mergeOperator
 	leftOperand := operands[0]
 	for i := 1; i < int(cNumOperands); i++ {
 		newValue, success = merger.PartialMerge(key, leftOperand, operands[i])
@@ -125,5 +128,5 @@ func gorocksdb_mergeoperator_partial_merge_multi(idx int, cKey *C.char, cKeyLen 
 
 //export gorocksdb_mergeoperator_name
 func gorocksdb_mergeoperator_name(idx int) *C.char {
-	return mergeOperatorNames.Get(idx).(*C.char)
+	return mergeOperators.Get(idx).(mergeOperatorWrapper).name
 }
