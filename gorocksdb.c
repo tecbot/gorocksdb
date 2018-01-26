@@ -1,5 +1,15 @@
+#include <stdlib.h>
+#include <string.h>
 #include "gorocksdb.h"
 #include "_cgo_export.h"
+
+void* copy_bytes(void* data, size_t len) {
+    char* p = malloc(len);
+    if (p != 0) {
+        memmove(p, data, len);
+    }
+    return p;
+}
 
 /* Base */
 

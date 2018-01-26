@@ -3,6 +3,8 @@
 
 // This API provides convenient C wrapper functions for rocksdb client.
 
+extern void* copy_bytes(void* data, size_t len);
+
 /* Base */
 
 extern void gorocksdb_destruct_handler(void* state);
