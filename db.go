@@ -266,23 +266,21 @@ func (db *DB) GetCF(opts *ReadOptions, cf *ColumnFamilyHandle, key []byte) (*Sli
 
 // Get returns the data associated with the key from the database.
 func (db *DB) MultiGet(opts *ReadOptions, keys ...[]byte) (Slices, error) {
-	cKeys, cKeySizes := bytesSliceToArray(keys)
-	defer freeCharsArray(cKeys, len(keys))
-	vals, cVals := emptyCharSlice(len(keys))
-	rocksErrs, cRocksErrs := emptyCharSlice(len(keys))
-	valSizes, cValSizes := emptySizetSlice(len(keys))
-	_ = vals
-	_ = valSizes
+	cKeys, cKeySizes := byteSlicesToCSlices(keys)
+	defer cKeys.Destroy()
+	vals := make(charsSlice, len(keys))
+	valSizes := make(sizeTSlice, len(keys))
+	rocksErrs := make(charsSlice, len(keys))
 
 	C.rocksdb_multi_get(
 		db.c,
 		opts.c,
 		C.size_t(len(keys)),
-		cKeys,
-		cKeySizes,
-		cVals,
-		cValSizes,
-		cRocksErrs,
+		cKeys.c(),
+		cKeySizes.c(),
+		vals.c(),
+		valSizes.c(),
+		rocksErrs.c(),
 	)
 
 	var errs []error
