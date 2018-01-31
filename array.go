@@ -1,6 +1,7 @@
 package gorocksdb
 
 // #include "stdlib.h"
+// #include "rocksdb/c.h"
 import "C"
 import (
 	"reflect"
@@ -9,6 +10,7 @@ import (
 
 type charsSlice []*C.char
 type sizeTSlice []C.size_t
+type columnFamilySlice []*C.rocksdb_column_family_handle_t
 
 func (s charsSlice) c() **C.char {
 	sH := (*reflect.SliceHeader)(unsafe.Pointer(&s))
@@ -18,6 +20,11 @@ func (s charsSlice) c() **C.char {
 func (s sizeTSlice) c() *C.size_t {
 	sH := (*reflect.SliceHeader)(unsafe.Pointer(&s))
 	return (*C.size_t)(unsafe.Pointer(sH.Data))
+}
+
+func (s columnFamilySlice) c() **C.rocksdb_column_family_handle_t {
+	sH := (*reflect.SliceHeader)(unsafe.Pointer(&s))
+	return (**C.rocksdb_column_family_handle_t)(unsafe.Pointer(sH.Data))
 }
 
 // bytesSliceToCSlices converts a slice of byte slices to two slices with C
