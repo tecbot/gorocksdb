@@ -5,6 +5,7 @@ package gorocksdb
 import "C"
 import (
 	"errors"
+	"fmt"
 	"unsafe"
 )
 
@@ -261,6 +262,49 @@ func (db *DB) GetCF(opts *ReadOptions, cf *ColumnFamilyHandle, key []byte) (*Sli
 		return nil, errors.New(C.GoString(cErr))
 	}
 	return NewSlice(cValue, cValLen), nil
+}
+
+// Get returns the data associated with the key from the database.
+func (db *DB) MultiGet(opts *ReadOptions, keys ...[]byte) (Slices, error) {
+	cKeys, cKeySizes := bytesSliceToArray(keys)
+	defer freeCharsArray(cKeys, len(keys))
+	vals, cVals := emptyCharSlice(len(keys))
+	rocksErrs, cRocksErrs := emptyCharSlice(len(keys))
+	valSizes, cValSizes := emptySizetSlice(len(keys))
+	_ = vals
+	_ = valSizes
+
+	C.rocksdb_multi_get(
+		db.c,
+		opts.c,
+		C.size_t(len(keys)),
+		cKeys,
+		cKeySizes,
+		cVals,
+		cValSizes,
+		cRocksErrs,
+	)
+
+	var errs []error
+
+	for i, rocksErr := range rocksErrs {
+		if rocksErr != nil {
+			defer C.free(unsafe.Pointer(rocksErr))
+			err := fmt.Errorf("getting %q failed: %v", string(keys[i]), C.GoString(rocksErr))
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("failed to get %d keys, first error: %v", len(errs), errs[0])
+	}
+
+	slices := make(Slices, len(keys))
+	for i, val := range vals {
+		slices[i] = NewSlice(val, valSizes[i])
+	}
+
+	return slices, nil
 }
 
 // Put writes data associated with a key to the database.
