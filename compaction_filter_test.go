@@ -11,9 +11,12 @@ func TestCompactionFilter(t *testing.T) {
 	var (
 		changeKey    = []byte("change")
 		changeValOld = []byte("old")
-		changeValNew = []byte("new")
+		changeValNew = cBackedBytes([]byte("new"))
 		deleteKey    = []byte("delete")
 	)
+
+	defer freeCBackedBytes(changeValNew)
+
 	db := newTestDB(t, "TestCompactionFilter", func(opts *Options) {
 		opts.SetCompactionFilter(&mockCompactionFilter{
 			filter: func(level int, key, val []byte) (remove bool, newVal []byte) {

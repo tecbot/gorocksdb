@@ -25,7 +25,7 @@ install:
   - go get -t ./...
 
 script:
-  - go test -v ./
+  - GODEBUG=cgocheck=2 go test -v ./
 
 notifications:
   email:
