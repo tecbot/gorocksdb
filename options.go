@@ -1041,9 +1041,9 @@ func (opts *Options) SetBlockBasedTableFactory(value *BlockBasedTableOptions) {
 //
 // DEFAULT: false
 // Immutable.
-func (opts *Options) SetAllowIngestBehind(value bool) {
-	C.rocksdb_options_set_allow_ingest_behind(opts.c, boolToChar(value))
-}
+//func (opts *Options) SetAllowIngestBehind(value bool) {
+//	C.rocksdb_options_set_allow_ingest_behind(opts.c, boolToChar(value))
+//}
 
 // Destroy deallocates the Options object.
 func (opts *Options) Destroy() {
