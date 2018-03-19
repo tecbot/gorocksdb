@@ -21,6 +21,7 @@ install:
   - make
   - sudo cp --preserve=links ./lib/liblz4.* /usr/lib/
   - sudo cp ./lib/*.h /usr/include/
+  - popd
   - git clone --depth 1 https://github.com/facebook/rocksdb.git /tmp/rocksdb
   - pushd /tmp/rocksdb
   - make clean
