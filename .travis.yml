@@ -15,7 +15,13 @@ before_install:
   - sudo dpkg -i libgflags-dev_2.0-1.1ubuntu1_amd64.deb
 
 install:
-  - git clone https://github.com/facebook/rocksdb.git /tmp/rocksdb
+  - git clone --depth 1 https://github.com/lz4/lz4.git /tmp/lz4
+  - pushd /tmp/lz4
+  - make clean
+  - make
+  - sudo cp --preserve=links ./lib/liblz4.* /usr/lib/
+  - sudo cp ./lib/*.h /usr/include/
+  - git clone --depth 1 https://github.com/facebook/rocksdb.git /tmp/rocksdb
   - pushd /tmp/rocksdb
   - make clean
   - make shared_lib
