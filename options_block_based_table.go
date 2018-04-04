@@ -114,13 +114,6 @@ func (opts *BlockBasedTableOptions) SetNoBlockCache(value bool) {
 	C.rocksdb_block_based_options_set_no_block_cache(opts.c, boolToChar(value))
 }
 
-// SetCacheIndexAndFilterBlocks by default filter blocks are not
-// put into the cache, enable in order to put them in cache.
-// Default: false
-func (opts *BlockBasedTableOptions) SetCacheIndexAndFilterBlocks(value bool) {
-	C.rocksdb_block_based_options_set_cache_index_and_filter_blocks(opts.c, boolToChar(value))
-}
-
 // SetBlockCache sets the control over blocks (user data is stored in a set of blocks, and
 // a block is the unit of reading from disk).
 //

@@ -91,6 +91,30 @@ func TestDBCRUDDBPaths(t *testing.T) {
 	ensure.True(t, v3.Data() == nil)
 }
 
+func TestMultiGet(t *testing.T) {
+	db := newTestDB(t, "TestDBGet", nil)
+	defer db.Close()
+
+	var (
+		givenKey1 = []byte("hello")
+		givenVal1 = []byte("world")
+		givenKey2 = []byte("foo")
+		givenVal2 = []byte("bar")
+		wo        = NewDefaultWriteOptions()
+		ro        = NewDefaultReadOptions()
+	)
+
+	// create
+	ensure.Nil(t, db.Put(wo, givenKey1, givenVal1))
+	ensure.Nil(t, db.Put(wo, givenKey2, givenVal2))
+
+	// retrieve
+	res, err := db.MultiGet(ro, [][]byte{givenKey1, givenKey2})
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, res[0], givenVal1)
+	ensure.DeepEqual(t, res[1], givenVal2)
+}
+
 func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
 	dir, err := ioutil.TempDir("", "gorocksdb-"+name)
 	ensure.Nil(t, err)
