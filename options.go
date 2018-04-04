@@ -188,6 +188,42 @@ func (opts *Options) SetParanoidChecks(value bool) {
 	C.rocksdb_options_set_paranoid_checks(opts.c, boolToChar(value))
 }
 
+// SetDBPaths sets the DBPaths of the options.
+//
+// A list of paths where SST files can be put into, with its target size.
+// Newer data is placed into paths specified earlier in the vector while
+// older data gradually moves to paths specified later in the vector.
+//
+// For example, you have a flash device with 10GB allocated for the DB,
+// as well as a hard drive of 2TB, you should config it to be:
+//   [{"/flash_path", 10GB}, {"/hard_drive", 2TB}]
+//
+// The system will try to guarantee data under each path is close to but
+// not larger than the target size. But current and future file sizes used
+// by determining where to place a file are based on best-effort estimation,
+// which means there is a chance that the actual size under the directory
+// is slightly more than target size under some workloads. User should give
+// some buffer room for those cases.
+//
+// If none of the paths has sufficient room to place a file, the file will
+// be placed to the last path anyway, despite to the target size.
+//
+// Placing newer data to earlier paths is also best-efforts. User should
+// expect user files to be placed in higher levels in some extreme cases.
+//
+// If left empty, only one path will be used, which is db_name passed when
+// opening the DB.
+// Default: empty
+func (opts *Options) SetDBPaths(dbpaths []*DBPath) {
+	l := len(dbpaths)
+	cDbpaths := make([]*C.rocksdb_dbpath_t, l)
+	for i, v := range dbpaths {
+		cDbpaths[i] = v.c
+	}
+
+	C.rocksdb_options_set_db_paths(opts.c, &cDbpaths[0], C.size_t(l))
+}
+
 // SetEnv sets the specified object to interact with the environment,
 // e.g. to read/write files, schedule background work, etc.
 // Default: DefaultEnv
@@ -218,8 +254,19 @@ func (opts *Options) IncreaseParallelism(total_threads int) {
 //
 // Use this if you don't need to keep the data sorted, i.e. you'll never use
 // an iterator, only Put() and Get() API calls
+//
+// If you use this with rocksdb >= 5.0.2, you must call `SetAllowConcurrentMemtableWrites(false)`
+// to avoid an assertion error immediately on opening the db.
 func (opts *Options) OptimizeForPointLookup(block_cache_size_mb uint64) {
 	C.rocksdb_options_optimize_for_point_lookup(opts.c, C.uint64_t(block_cache_size_mb))
+}
+
+// Set whether to allow concurrent memtable writes. Conccurent writes are
+// not supported by all memtable factories (currently only SkipList memtables).
+// As of rocksdb 5.0.2 you must call `SetAllowConcurrentMemtableWrites(false)`
+// if you use `OptimizeForPointLookup`.
+func (opts *Options) SetAllowConcurrentMemtableWrites(allow bool) {
+	C.rocksdb_options_set_allow_concurrent_memtable_write(opts.c, boolToChar(allow))
 }
 
 // OptimizeLevelStyleCompaction optimize the DB for leveld compaction.
@@ -292,6 +339,25 @@ func (opts *Options) SetMinWriteBufferNumberToMerge(value int) {
 // Default: 1000
 func (opts *Options) SetMaxOpenFiles(value int) {
 	C.rocksdb_options_set_max_open_files(opts.c, C.int(value))
+}
+
+// SetMaxFileOpeningThreads sets the maximum number of file opening threads.
+// If max_open_files is -1, DB will open all files on DB::Open(). You can
+// use this option to increase the number of threads used to open the files.
+// Default: 16
+func (opts *Options) SetMaxFileOpeningThreads(value int) {
+	C.rocksdb_options_set_max_file_opening_threads(opts.c, C.int(value))
+}
+
+// SetMaxTotalWalSize sets the maximum total wal size in bytes.
+// Once write-ahead logs exceed this size, we will start forcing the flush of
+// column families whose memtables are backed by the oldest live WAL file
+// (i.e. the ones that are causing all the space amplification). If set to 0
+// (default), we will dynamically choose the WAL size limit to be
+// [sum of all write_buffer_size * max_write_buffer_number] * 4
+// Default: 0
+func (opts *Options) SetMaxTotalWalSize(value uint64) {
+	C.rocksdb_options_set_max_total_wal_size(opts.c, C.uint64_t(value))
 }
 
 // SetCompression sets the compression algorithm.
@@ -436,6 +502,33 @@ func (opts *Options) SetMaxBytesForLevelMultiplier(value float64) {
 	C.rocksdb_options_set_max_bytes_for_level_multiplier(opts.c, C.double(value))
 }
 
+// SetMaxCompactionBytes sets the maximum number of bytes in all compacted files.
+// We try to limit number of bytes in one compaction to be lower than this
+// threshold. But it's not guaranteed.
+// Value 0 will be sanitized.
+// Default: result.target_file_size_base * 25
+func (opts *Options) SetMaxCompactionBytes(value uint64) {
+	C.rocksdb_options_set_max_compaction_bytes(opts.c, C.uint64_t(value))
+}
+
+// SetSoftPendingCompactionBytesLimit sets the threshold at which
+// all writes will be slowed down to at least delayed_write_rate if estimated
+// bytes needed to be compaction exceed this threshold.
+//
+// Default: 64GB
+func (opts *Options) SetSoftPendingCompactionBytesLimit(value uint64) {
+	C.rocksdb_options_set_soft_pending_compaction_bytes_limit(opts.c, C.size_t(value))
+}
+
+// SetHardPendingCompactionBytesLimit sets the bytes threshold at which
+// all writes are stopped if estimated bytes needed to be compaction exceed
+// this threshold.
+//
+// Default: 256GB
+func (opts *Options) SetHardPendingCompactionBytesLimit(value uint64) {
+	C.rocksdb_options_set_hard_pending_compaction_bytes_limit(opts.c, C.size_t(value))
+}
+
 // SetMaxBytesForLevelMultiplierAdditional sets different max-size multipliers
 // for different levels.
 //
@@ -449,18 +542,6 @@ func (opts *Options) SetMaxBytesForLevelMultiplierAdditional(value []int) {
 	}
 
 	C.rocksdb_options_set_max_bytes_for_level_multiplier_additional(opts.c, &cLevels[0], C.size_t(len(value)))
-}
-
-// SetDisableDataSync enable/disable data sync.
-//
-// If true, then the contents of data files are not synced
-// to stable storage. Their contents remain in the OS buffers till the
-// OS decides to flush them. This option is good for bulk-loading
-// of data. Once the bulk-loading is complete, please issue a
-// sync to the OS to flush all dirty buffers to stable storage.
-// Default: false
-func (opts *Options) SetDisableDataSync(value bool) {
-	C.rocksdb_options_set_disable_data_sync(opts.c, C.int(btoi(value)))
 }
 
 // SetUseFsync enable/disable fsync.
@@ -676,14 +757,6 @@ func (opts *Options) SetPurgeRedundantKvsWhileFlush(value bool) {
 	C.rocksdb_options_set_purge_redundant_kvs_while_flush(opts.c, boolToChar(value))
 }
 
-// SetAllowOsBuffer enable/disable os buffer.
-//
-// Data being read from file storage may be buffered in the OS
-// Default: true
-func (opts *Options) SetAllowOsBuffer(value bool) {
-	C.rocksdb_options_set_allow_os_buffer(opts.c, boolToChar(value))
-}
-
 // SetAllowMmapReads enable/disable mmap reads for reading sst tables.
 // Default: false
 func (opts *Options) SetAllowMmapReads(value bool) {
@@ -691,9 +764,22 @@ func (opts *Options) SetAllowMmapReads(value bool) {
 }
 
 // SetAllowMmapWrites enable/disable mmap writes for writing sst tables.
-// Default: true
+// Default: false
 func (opts *Options) SetAllowMmapWrites(value bool) {
 	C.rocksdb_options_set_allow_mmap_writes(opts.c, boolToChar(value))
+}
+
+// SetUseDirectReads enable/disable direct I/O mode (O_DIRECT) for reads
+// Default: false
+func (opts *Options) SetUseDirectReads(value bool) {
+	C.rocksdb_options_set_use_direct_reads(opts.c, boolToChar(value))
+}
+
+// SetUseDirectIOForFlushAndCompaction enable/disable direct I/O mode (O_DIRECT) for both reads and writes in background flush and compactions
+// When true, new_table_reader_for_compaction_inputs is forced to true.
+// Default: false
+func (opts *Options) SetUseDirectIOForFlushAndCompaction(value bool) {
+	C.rocksdb_options_set_use_direct_io_for_flush_and_compaction(opts.c, boolToChar(value))
 }
 
 // SetIsFdCloseOnExec enable/dsiable child process inherit open files.
@@ -723,6 +809,20 @@ func (opts *Options) SetStatsDumpPeriodSec(value uint) {
 // Default: true
 func (opts *Options) SetAdviseRandomOnOpen(value bool) {
 	C.rocksdb_options_set_advise_random_on_open(opts.c, boolToChar(value))
+}
+
+// SetDbWriteBufferSize sets the amount of data to build up
+// in memtables across all column families before writing to disk.
+//
+// This is distinct from write_buffer_size, which enforces a limit
+// for a single memtable.
+//
+// This feature is disabled by default. Specify a non-zero value
+// to enable it.
+//
+// Default: 0 (disabled)
+func (opts *Options) SetDbWriteBufferSize(value int) {
+	C.rocksdb_options_set_db_write_buffer_size(opts.c, C.size_t(value))
 }
 
 // SetAccessHintOnCompactionStart specifies the file access pattern
@@ -774,13 +874,13 @@ func (opts *Options) SetFIFOCompactionOptions(value *FIFOCompactionOptions) {
 	C.rocksdb_options_set_fifo_compaction_options(opts.c, value.c)
 }
 
-// SetVerifyChecksumsInCompaction enable/disable checksum verification.
-//
-// If true, compaction will verify checksum on every read that happens
-// as part of compaction
-// Default: true
-func (opts *Options) SetVerifyChecksumsInCompaction(value bool) {
-	C.rocksdb_options_set_verify_checksums_in_compaction(opts.c, boolToChar(value))
+// SetRateLimiter sets the rate limiter of the options.
+// Use to control write rate of flush and compaction. Flush has higher
+// priority than compaction. Rate limiting is disabled if nullptr.
+// If rate limiter is enabled, bytes_per_sync is set to 1MB by default.
+// Default: nullptr
+func (opts *Options) SetRateLimiter(rateLimiter *RateLimiter) {
+	C.rocksdb_options_set_ratelimiter(opts.c, rateLimiter.c)
 }
 
 // SetMaxSequentialSkipInIterations specifies whether an iteration->Next()
@@ -810,6 +910,21 @@ func (opts *Options) SetInplaceUpdateNumLocks(value int) {
 	C.rocksdb_options_set_inplace_update_num_locks(opts.c, C.size_t(value))
 }
 
+// SetMemtableHugePageSize sets the page size for huge page for
+// arena used by the memtable.
+// If <=0, it won't allocate from huge page but from malloc.
+// Users are responsible to reserve huge pages for it to be allocated. For
+// example:
+//      sysctl -w vm.nr_hugepages=20
+// See linux doc Documentation/vm/hugetlbpage.txt
+// If there isn't enough free huge page available, it will fall back to
+// malloc.
+//
+// Dynamically changeable through SetOptions() API
+func (opts *Options) SetMemtableHugePageSize(value int) {
+	C.rocksdb_options_set_memtable_huge_page_size(opts.c, C.size_t(value))
+}
+
 // SetBloomLocality sets the bloom locality.
 //
 // Control locality of bloom filter probes to improve cache miss rate.
@@ -836,17 +951,6 @@ func (opts *Options) SetBloomLocality(value uint32) {
 // Default: 0 (disabled)
 func (opts *Options) SetMaxSuccessiveMerges(value int) {
 	C.rocksdb_options_set_max_successive_merges(opts.c, C.size_t(value))
-}
-
-// SetMinPartialMergeOperands sets the number of partial merge operands
-// to accumulate before partial merge will be performed.
-//
-// Partial merge will not be called if the list of values to merge
-// is less than min_partial_merge_operands.
-// If min_partial_merge_operands < 2, then it will be treated as 2.
-// Default: 2
-func (opts *Options) SetMinPartialMergeOperands(value uint32) {
-	C.rocksdb_options_set_min_partial_merge_operands(opts.c, C.uint32_t(value))
 }
 
 // EnableStatistics enable statistics.
@@ -926,14 +1030,26 @@ func (opts *Options) SetBlockBasedTableFactory(value *BlockBasedTableOptions) {
 	C.rocksdb_options_set_block_based_table_factory(opts.c, value.c)
 }
 
+// SetAllowIngestBehind sets allow_ingest_behind
+// Set this option to true during creation of database if you want
+// to be able to ingest behind (call IngestExternalFile() skipping keys
+// that already exist, rather than overwriting matching keys).
+// Setting this option to true will affect 2 things:
+// 1) Disable some internal optimizations around SST file compression
+// 2) Reserve bottom-most level for ingested files only.
+// 3) Note that num_levels should be >= 3 if this option is turned on.
+//
+// DEFAULT: false
+// Immutable.
+func (opts *Options) SetAllowIngestBehind(value bool) {
+	C.rocksdb_options_set_allow_ingest_behind(opts.c, boolToChar(value))
+}
+
 // Destroy deallocates the Options object.
 func (opts *Options) Destroy() {
 	C.rocksdb_options_destroy(opts.c)
 	if opts.ccmp != nil {
 		C.rocksdb_comparator_destroy(opts.ccmp)
-	}
-	if opts.cmo != nil {
-		C.rocksdb_mergeoperator_destroy(opts.cmo)
 	}
 	if opts.cst != nil {
 		C.rocksdb_slicetransform_destroy(opts.cst)
