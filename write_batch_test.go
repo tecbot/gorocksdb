@@ -61,13 +61,13 @@ func TestWriteBatchIterator(t *testing.T) {
 	iter := wb.NewIterator()
 	ensure.True(t, iter.Next())
 	record := iter.Record()
-	ensure.DeepEqual(t, record.Type, WriteBatchRecordTypeValue)
+	ensure.DeepEqual(t, record.Type, WriteBatchValueRecord)
 	ensure.DeepEqual(t, record.Key, givenKey1)
 	ensure.DeepEqual(t, record.Value, givenVal1)
 
 	ensure.True(t, iter.Next())
 	record = iter.Record()
-	ensure.DeepEqual(t, record.Type, WriteBatchRecordTypeDeletion)
+	ensure.DeepEqual(t, record.Type, WriteBatchDeletionRecord)
 	ensure.DeepEqual(t, record.Key, givenKey2)
 
 	// there shouldn't be any left
