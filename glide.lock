@@ -1,0 +1,14 @@
+hash: 497f11485246b183f4c94c12fc5d97700e40e5c609d44d6c9cba1b61aeb6246e
+updated: 2018-05-20T23:43:12.111563+08:00
+imports: []
+testImports:
+- name: github.com/davecgh/go-spew
+  version: 8991bc29aa16c548c550c7ff78260e27b9ab7c73
+  subpackages:
+  - spew
+- name: github.com/facebookgo/ensure
+  version: b4ab57deab51ee655ae4bd85281f0715a068016d
+- name: github.com/facebookgo/stack
+  version: 751773369052141c013c6e827a71e8f35c07879c
+- name: github.com/facebookgo/subset
+  version: 8dac2c3c48703541e481feddf22975953d4ff842

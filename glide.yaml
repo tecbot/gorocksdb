@@ -1,0 +1,4 @@
+package: github.com/leeyazhou/gorocksdb
+import: []
+testImport:
+- package: github.com/facebookgo/ensure
