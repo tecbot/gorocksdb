@@ -140,3 +140,35 @@ func newTestDBPathNames(t *testing.T, name string, names []string, target_sizes 
 
 	return db
 }
+
+func TestDBMultiGet(t *testing.T) {
+	db := newTestDB(t, "TestDBMultiGet", nil)
+	defer db.Close()
+
+	var (
+		givenKey1 = []byte("hello1")
+		givenKey2 = []byte("hello2")
+		givenKey3 = []byte("hello3")
+		givenVal1 = []byte("world1")
+		givenVal2 = []byte("world2")
+		givenVal3 = []byte("world3")
+		wo        = NewDefaultWriteOptions()
+		ro        = NewDefaultReadOptions()
+	)
+
+	// create
+	ensure.Nil(t, db.Put(wo, givenKey1, givenVal1))
+	ensure.Nil(t, db.Put(wo, givenKey2, givenVal2))
+	ensure.Nil(t, db.Put(wo, givenKey3, givenVal3))
+
+	// retrieve
+	values, err := db.MultiGet(ro, []byte("noexist"), givenKey1, givenKey2, givenKey3)
+	defer values.Destroy()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, len(values), 4)
+
+	ensure.DeepEqual(t, values[0].Data(), []byte(nil))
+	ensure.DeepEqual(t, values[1].Data(), givenVal1)
+	ensure.DeepEqual(t, values[2].Data(), givenVal2)
+	ensure.DeepEqual(t, values[3].Data(), givenVal3)
+}

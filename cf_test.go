@@ -152,3 +152,78 @@ func TestColumnFamilyPutGetDelete(t *testing.T) {
 	ensure.Nil(t, err)
 	ensure.DeepEqual(t, actualVal.Size(), 0)
 }
+
+func newTestDBCF(t *testing.T, name string) (db *DB, cfh []*ColumnFamilyHandle, cleanup func()) {
+	dir, err := ioutil.TempDir("", "gorocksdb-TestColumnFamilyPutGet")
+	ensure.Nil(t, err)
+
+	givenNames := []string{"default", "guide"}
+	opts := NewDefaultOptions()
+	opts.SetCreateIfMissingColumnFamilies(true)
+	opts.SetCreateIfMissing(true)
+	db, cfh, err = OpenDbColumnFamilies(opts, dir, givenNames, []*Options{opts, opts})
+	ensure.Nil(t, err)
+	cleanup = func() {
+		for _, cf := range cfh {
+			cf.Destroy()
+		}
+		db.Close()
+	}
+	return db, cfh, cleanup
+}
+
+func TestColumnFamilyMultiGet(t *testing.T) {
+	db, cfh, cleanup := newTestDBCF(t, "TestDBMultiGet")
+	defer cleanup()
+
+	var (
+		givenKey1 = []byte("hello1")
+		givenKey2 = []byte("hello2")
+		givenKey3 = []byte("hello3")
+		givenVal1 = []byte("world1")
+		givenVal2 = []byte("world2")
+		givenVal3 = []byte("world3")
+		wo        = NewDefaultWriteOptions()
+		ro        = NewDefaultReadOptions()
+	)
+
+	// create
+	ensure.Nil(t, db.PutCF(wo, cfh[0], givenKey1, givenVal1))
+	ensure.Nil(t, db.PutCF(wo, cfh[1], givenKey2, givenVal2))
+	ensure.Nil(t, db.PutCF(wo, cfh[1], givenKey3, givenVal3))
+
+	// column family 0 only has givenKey1
+	values, err := db.MultiGetCF(ro, cfh[0], []byte("noexist"), givenKey1, givenKey2, givenKey3)
+	defer values.Destroy()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, len(values), 4)
+
+	ensure.DeepEqual(t, values[0].Data(), []byte(nil))
+	ensure.DeepEqual(t, values[1].Data(), givenVal1)
+	ensure.DeepEqual(t, values[2].Data(), []byte(nil))
+	ensure.DeepEqual(t, values[3].Data(), []byte(nil))
+
+	// column family 1 only has givenKey2 and givenKey3
+	values, err = db.MultiGetCF(ro, cfh[1], []byte("noexist"), givenKey1, givenKey2, givenKey3)
+	defer values.Destroy()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, len(values), 4)
+
+	ensure.DeepEqual(t, values[0].Data(), []byte(nil))
+	ensure.DeepEqual(t, values[1].Data(), []byte(nil))
+	ensure.DeepEqual(t, values[2].Data(), givenVal2)
+	ensure.DeepEqual(t, values[3].Data(), givenVal3)
+
+	// getting them all from the right CF should return them all
+	values, err = db.MultiGetCFMultiCF(ro,
+		ColumnFamilyHandles{cfh[0], cfh[1], cfh[1]},
+		[][]byte{givenKey1, givenKey2, givenKey3},
+	)
+	defer values.Destroy()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, len(values), 3)
+
+	ensure.DeepEqual(t, values[0].Data(), givenVal1)
+	ensure.DeepEqual(t, values[1].Data(), givenVal2)
+	ensure.DeepEqual(t, values[2].Data(), givenVal3)
+}
