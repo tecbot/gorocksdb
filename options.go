@@ -504,6 +504,10 @@ func (opts *Options) SetMaxBytesForLevelMultiplier(value float64) {
 	C.rocksdb_options_set_max_bytes_for_level_multiplier(opts.c, C.double(value))
 }
 
+func (opts *Options) SetLevelCompactionDynamicLevelBytes(value bool) {
+	C.rocksdb_options_set_level_compaction_dynamic_level_bytes(opts.c, boolToChar(value))
+}
+
 // SetMaxCompactionBytes sets the maximum number of bytes in all compacted files.
 // We try to limit number of bytes in one compaction to be lower than this
 // threshold. But it's not guaranteed.
