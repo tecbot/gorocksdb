@@ -1,5 +1,5 @@
 package gorocksdb
-
+//#include <string.h>
 import "C"
 import (
 	"reflect"
@@ -45,7 +45,7 @@ func cByteSlice(b []byte) *C.char {
 	var c *C.char
 	if len(b) > 0 {
 		cData := C.malloc(C.size_t(len(b)))
-		copy((*[1 << 24]byte)(cData)[0:len(b)], b)
+		C.memcpy(unsafe.Pointer(&cData), unsafe.Pointer(&b[0]), C.size_t(len(b)))
 		c = (*C.char)(cData)
 	}
 	return c
