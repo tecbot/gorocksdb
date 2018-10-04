@@ -23,7 +23,6 @@ type MemoryUsage struct {
 // GetApproximateMemoryUsageByType returns summary
 // memory usage stats for given databases and caches.
 func GetApproximateMemoryUsageByType(dbs []*DB, caches []*Cache) (*MemoryUsage, error) {
-
 	// register memory consumers
 	consumers := C.rocksdb_memory_consumers_create()
 	defer C.rocksdb_memory_consumers_destroy(consumers)
