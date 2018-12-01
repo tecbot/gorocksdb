@@ -264,6 +264,20 @@ func (db *DB) GetCF(opts *ReadOptions, cf *ColumnFamilyHandle, key []byte) (*Sli
 	return NewSlice(cValue, cValLen), nil
 }
 
+// GetPinned returns the data associated with the key from the database.
+func (db *DB) GetPinned(opts *ReadOptions, key []byte) (*PinnableSliceHandle, error) {
+	var (
+		cErr *C.char
+		cKey = byteToChar(key)
+	)
+	cHandle := C.rocksdb_get_pinned(db.c, opts.c, cKey, C.size_t(len(key)), &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return NewNativePinnableSliceHandle(cHandle), nil
+}
+
 // MultiGet returns the data associated with the passed keys from the database
 func (db *DB) MultiGet(opts *ReadOptions, keys ...[]byte) (Slices, error) {
 	cKeys, cKeySizes := byteSlicesToCSlices(keys)
