@@ -937,6 +937,13 @@ func (opts *Options) SetFIFOCompactionOptions(value *FIFOCompactionOptions) {
 	C.rocksdb_options_set_fifo_compaction_options(opts.c, value.c)
 }
 
+// GetStatisticsString returns the statistics as a string.
+func (opts *Options) GetStatisticsString() string {
+	sString := C.rocksdb_options_statistics_get_string(opts.c)
+	defer C.free(unsafe.Pointer(sString))
+	return C.GoString(sString)
+}
+
 // SetRateLimiter sets the rate limiter of the options.
 // Use to control write rate of flush and compaction. Flush has higher
 // priority than compaction. Rate limiting is disabled if nullptr.
