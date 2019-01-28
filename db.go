@@ -42,6 +42,25 @@ func OpenDb(opts *Options, name string) (*DB, error) {
 	}, nil
 }
 
+// OpenDbWithTTL opens a database with TTL support with the specified options.
+func OpenDbWithTTL(opts *Options, name string, ttl int) (*DB, error) {
+	var (
+		cErr  *C.char
+		cName = C.CString(name)
+	)
+	defer C.free(unsafe.Pointer(cName))
+	db := C.rocksdb_open_with_ttl(opts.c, cName, C.int(ttl), &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return &DB{
+		name: name,
+		c:    db,
+		opts: opts,
+	}, nil
+}
+
 // OpenDbForReadOnly opens a database with the specified options for readonly usage.
 func OpenDbForReadOnly(opts *Options, name string, errorIfLogFileExist bool) (*DB, error) {
 	var (
