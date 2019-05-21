@@ -1,4 +1,4 @@
-// +build !embed
+// +build !linux !static
 
 package gorocksdb
 

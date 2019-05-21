@@ -50,11 +50,15 @@ func NewBloomFilter(bitsPerKey int) FilterPolicy {
 }
 
 // Hold references to filter policies.
-var filterPolicies []FilterPolicy
+var filterPolicies = NewCOWList()
+
+type filterPolicyWrapper struct {
+	name         *C.char
+	filterPolicy FilterPolicy
+}
 
 func registerFilterPolicy(fp FilterPolicy) int {
-	filterPolicies = append(filterPolicies, fp)
-	return len(filterPolicies) - 1
+	return filterPolicies.Append(filterPolicyWrapper{C.CString(fp.Name()), fp})
 }
 
 //export gorocksdb_filterpolicy_create_filter
@@ -66,7 +70,7 @@ func gorocksdb_filterpolicy_create_filter(idx int, cKeys **C.char, cKeysLen *C.s
 		keys[i] = charToByte(rawKeys[i], len)
 	}
 
-	dst := filterPolicies[idx].CreateFilter(keys)
+	dst := filterPolicies.Get(idx).(filterPolicyWrapper).filterPolicy.CreateFilter(keys)
 	*cDstLen = C.size_t(len(dst))
 	return cByteSlice(dst)
 }
@@ -75,10 +79,10 @@ func gorocksdb_filterpolicy_create_filter(idx int, cKeys **C.char, cKeysLen *C.s
 func gorocksdb_filterpolicy_key_may_match(idx int, cKey *C.char, cKeyLen C.size_t, cFilter *C.char, cFilterLen C.size_t) C.uchar {
 	key := charToByte(cKey, cKeyLen)
 	filter := charToByte(cFilter, cFilterLen)
-	return boolToChar(filterPolicies[idx].KeyMayMatch(key, filter))
+	return boolToChar(filterPolicies.Get(idx).(filterPolicyWrapper).filterPolicy.KeyMayMatch(key, filter))
 }
 
 //export gorocksdb_filterpolicy_name
 func gorocksdb_filterpolicy_name(idx int) *C.char {
-	return stringToChar(filterPolicies[idx].Name())
+	return filterPolicies.Get(idx).(filterPolicyWrapper).name
 }

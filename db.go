@@ -5,6 +5,7 @@ package gorocksdb
 import "C"
 import (
 	"errors"
+	"fmt"
 	"unsafe"
 )
 
@@ -30,6 +31,25 @@ func OpenDb(opts *Options, name string) (*DB, error) {
 	)
 	defer C.free(unsafe.Pointer(cName))
 	db := C.rocksdb_open(opts.c, cName, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return &DB{
+		name: name,
+		c:    db,
+		opts: opts,
+	}, nil
+}
+
+// OpenDbWithTTL opens a database with TTL support with the specified options.
+func OpenDbWithTTL(opts *Options, name string, ttl int) (*DB, error) {
+	var (
+		cErr  *C.char
+		cName = C.CString(name)
+	)
+	defer C.free(unsafe.Pointer(cName))
+	db := C.rocksdb_open_with_ttl(opts.c, cName, C.int(ttl), &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
@@ -263,6 +283,113 @@ func (db *DB) GetCF(opts *ReadOptions, cf *ColumnFamilyHandle, key []byte) (*Sli
 	return NewSlice(cValue, cValLen), nil
 }
 
+// GetPinned returns the data associated with the key from the database.
+func (db *DB) GetPinned(opts *ReadOptions, key []byte) (*PinnableSliceHandle, error) {
+	var (
+		cErr *C.char
+		cKey = byteToChar(key)
+	)
+	cHandle := C.rocksdb_get_pinned(db.c, opts.c, cKey, C.size_t(len(key)), &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return NewNativePinnableSliceHandle(cHandle), nil
+}
+
+// MultiGet returns the data associated with the passed keys from the database
+func (db *DB) MultiGet(opts *ReadOptions, keys ...[]byte) (Slices, error) {
+	cKeys, cKeySizes := byteSlicesToCSlices(keys)
+	defer cKeys.Destroy()
+	vals := make(charsSlice, len(keys))
+	valSizes := make(sizeTSlice, len(keys))
+	rocksErrs := make(charsSlice, len(keys))
+
+	C.rocksdb_multi_get(
+		db.c,
+		opts.c,
+		C.size_t(len(keys)),
+		cKeys.c(),
+		cKeySizes.c(),
+		vals.c(),
+		valSizes.c(),
+		rocksErrs.c(),
+	)
+
+	var errs []error
+
+	for i, rocksErr := range rocksErrs {
+		if rocksErr != nil {
+			defer C.free(unsafe.Pointer(rocksErr))
+			err := fmt.Errorf("getting %q failed: %v", string(keys[i]), C.GoString(rocksErr))
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("failed to get %d keys, first error: %v", len(errs), errs[0])
+	}
+
+	slices := make(Slices, len(keys))
+	for i, val := range vals {
+		slices[i] = NewSlice(val, valSizes[i])
+	}
+
+	return slices, nil
+}
+
+// MultiGetCF returns the data associated with the passed keys from the column family
+func (db *DB) MultiGetCF(opts *ReadOptions, cf *ColumnFamilyHandle, keys ...[]byte) (Slices, error) {
+	cfs := make(ColumnFamilyHandles, len(keys))
+	for i := 0; i < len(keys); i++ {
+		cfs[i] = cf
+	}
+	return db.MultiGetCFMultiCF(opts, cfs, keys)
+}
+
+// MultiGetCFMultiCF returns the data associated with the passed keys and
+// column families.
+func (db *DB) MultiGetCFMultiCF(opts *ReadOptions, cfs ColumnFamilyHandles, keys [][]byte) (Slices, error) {
+	cKeys, cKeySizes := byteSlicesToCSlices(keys)
+	defer cKeys.Destroy()
+	vals := make(charsSlice, len(keys))
+	valSizes := make(sizeTSlice, len(keys))
+	rocksErrs := make(charsSlice, len(keys))
+
+	C.rocksdb_multi_get_cf(
+		db.c,
+		opts.c,
+		cfs.toCSlice().c(),
+		C.size_t(len(keys)),
+		cKeys.c(),
+		cKeySizes.c(),
+		vals.c(),
+		valSizes.c(),
+		rocksErrs.c(),
+	)
+
+	var errs []error
+
+	for i, rocksErr := range rocksErrs {
+		if rocksErr != nil {
+			defer C.free(unsafe.Pointer(rocksErr))
+			err := fmt.Errorf("getting %q failed: %v", string(keys[i]), C.GoString(rocksErr))
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return nil, fmt.Errorf("failed to get %d keys, first error: %v", len(errs), errs[0])
+	}
+
+	slices := make(Slices, len(keys))
+	for i, val := range vals {
+		slices[i] = NewSlice(val, valSizes[i])
+	}
+
+	return slices, nil
+}
+
 // Put writes data associated with a key to the database.
 func (db *DB) Put(opts *WriteOptions, key, value []byte) error {
 	var (
@@ -380,7 +507,13 @@ func (db *DB) NewIteratorCF(opts *ReadOptions, cf *ColumnFamilyHandle) *Iterator
 // NewSnapshot creates a new snapshot of the database.
 func (db *DB) NewSnapshot() *Snapshot {
 	cSnap := C.rocksdb_create_snapshot(db.c)
-	return NewNativeSnapshot(cSnap, db.c)
+	return NewNativeSnapshot(cSnap)
+}
+
+// ReleaseSnapshot releases the snapshot and its resources.
+func (db *DB) ReleaseSnapshot(snapshot *Snapshot) {
+	C.rocksdb_release_snapshot(db.c, snapshot.c)
+	snapshot.c = nil
 }
 
 // GetProperty returns the value of a database property.
@@ -443,11 +576,18 @@ func (db *DB) GetApproximateSizes(ranges []Range) []uint64 {
 	cStartLens := make([]C.size_t, len(ranges))
 	cLimitLens := make([]C.size_t, len(ranges))
 	for i, r := range ranges {
-		cStarts[i] = byteToChar(r.Start)
+		cStarts[i] = (*C.char)(C.CBytes(r.Start))
 		cStartLens[i] = C.size_t(len(r.Start))
-		cLimits[i] = byteToChar(r.Limit)
+		cLimits[i] = (*C.char)(C.CBytes(r.Limit))
 		cLimitLens[i] = C.size_t(len(r.Limit))
 	}
+
+	defer func() {
+		for i := range ranges {
+			C.free(unsafe.Pointer(cStarts[i]))
+			C.free(unsafe.Pointer(cLimits[i]))
+		}
+	}()
 
 	C.rocksdb_approximate_sizes(
 		db.c,
@@ -477,11 +617,18 @@ func (db *DB) GetApproximateSizesCF(cf *ColumnFamilyHandle, ranges []Range) []ui
 	cStartLens := make([]C.size_t, len(ranges))
 	cLimitLens := make([]C.size_t, len(ranges))
 	for i, r := range ranges {
-		cStarts[i] = byteToChar(r.Start)
+		cStarts[i] = (*C.char)(C.CBytes(r.Start))
 		cStartLens[i] = C.size_t(len(r.Start))
-		cLimits[i] = byteToChar(r.Limit)
+		cLimits[i] = (*C.char)(C.CBytes(r.Limit))
 		cLimitLens[i] = C.size_t(len(r.Limit))
 	}
+
+	defer func() {
+		for i := range ranges {
+			C.free(unsafe.Pointer(cStarts[i]))
+			C.free(unsafe.Pointer(cLimits[i]))
+		}
+	}()
 
 	C.rocksdb_approximate_sizes_cf(
 		db.c,
@@ -494,6 +641,37 @@ func (db *DB) GetApproximateSizesCF(cf *ColumnFamilyHandle, ranges []Range) []ui
 		(*C.uint64_t)(&sizes[0]))
 
 	return sizes
+}
+
+// SetOptions dynamically changes options through the SetOptions API.
+func (db *DB) SetOptions(keys, values []string) error {
+	num_keys := len(keys)
+
+	if num_keys == 0 {
+		return nil
+	}
+
+	cKeys := make([]*C.char, num_keys)
+	cValues := make([]*C.char, num_keys)
+	for i := range keys {
+		cKeys[i] = C.CString(keys[i])
+		cValues[i] = C.CString(values[i])
+	}
+
+	var cErr *C.char
+
+	C.rocksdb_set_options(
+		db.c,
+		C.int(num_keys),
+		&cKeys[0],
+		&cValues[0],
+		&cErr,
+	)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
 }
 
 // LiveFileMetadata is a metadata which is associated with each SST file.
@@ -586,6 +764,81 @@ func (db *DB) DeleteFile(name string) {
 	cName := C.CString(name)
 	defer C.free(unsafe.Pointer(cName))
 	C.rocksdb_delete_file(db.c, cName)
+}
+
+// IngestExternalFile loads a list of external SST files.
+func (db *DB) IngestExternalFile(filePaths []string, opts *IngestExternalFileOptions) error {
+	cFilePaths := make([]*C.char, len(filePaths))
+	for i, s := range filePaths {
+		cFilePaths[i] = C.CString(s)
+	}
+	defer func() {
+		for _, s := range cFilePaths {
+			C.free(unsafe.Pointer(s))
+		}
+	}()
+
+	var cErr *C.char
+
+	C.rocksdb_ingest_external_file(
+		db.c,
+		&cFilePaths[0],
+		C.size_t(len(filePaths)),
+		opts.c,
+		&cErr,
+	)
+
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
+// IngestExternalFileCF loads a list of external SST files for a column family.
+func (db *DB) IngestExternalFileCF(handle *ColumnFamilyHandle, filePaths []string, opts *IngestExternalFileOptions) error {
+	cFilePaths := make([]*C.char, len(filePaths))
+	for i, s := range filePaths {
+		cFilePaths[i] = C.CString(s)
+	}
+	defer func() {
+		for _, s := range cFilePaths {
+			C.free(unsafe.Pointer(s))
+		}
+	}()
+
+	var cErr *C.char
+
+	C.rocksdb_ingest_external_file_cf(
+		db.c,
+		handle.c,
+		&cFilePaths[0],
+		C.size_t(len(filePaths)),
+		opts.c,
+		&cErr,
+	)
+
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
+// NewCheckpoint creates a new Checkpoint for this db.
+func (db *DB) NewCheckpoint() (*Checkpoint, error) {
+	var (
+		cErr *C.char
+	)
+	cCheckpoint := C.rocksdb_checkpoint_object_create(
+		db.c, &cErr,
+	)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+
+	return NewNativeCheckpoint(cCheckpoint), nil
 }
 
 // Close closes the database.

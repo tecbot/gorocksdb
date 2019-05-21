@@ -1,13 +1,13 @@
 language: go
 go:
-  - 1.6
+  - 1.11
   - tip
 
 before_install:
   - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
   - sudo apt-get update -qq
-  - sudo apt-get install g++-4.8 libsnappy-dev zlib1g-dev libbz2-dev -qq
-  - export CXX="g++-4.8" CC="gcc-4.8"
+  - sudo apt-get install gcc-6 g++-6 libsnappy-dev zlib1g-dev libbz2-dev -qq
+  - export CXX="g++-6" CC="gcc-6"
 
   - wget https://launchpad.net/ubuntu/+archive/primary/+files/libgflags2_2.0-1.1ubuntu1_amd64.deb
   - sudo dpkg -i libgflags2_2.0-1.1ubuntu1_amd64.deb
@@ -18,16 +18,14 @@ install:
   - git clone https://github.com/facebook/rocksdb.git /tmp/rocksdb
   - pushd /tmp/rocksdb
   - make clean
-  - make shared_lib
+  - make shared_lib -j`nproc`
   - sudo cp --preserve=links ./librocksdb.* /usr/lib/
   - sudo cp -r ./include/rocksdb/ /usr/include/
   - popd
   - go get -t ./...
-  - go version|grep go1.5 > /dev/null && go get -t -tags embed ./... || true
 
 script:
   - go test -v ./
-  - go version|grep go1.5 > /dev/null && go test -v -tags embed ./ || true
 
 notifications:
   email:
