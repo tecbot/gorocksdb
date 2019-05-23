@@ -50,6 +50,14 @@ func (s *Slice) Free() {
 	}
 }
 
+// Copy returns a new copy of the slice and frees the slice.
+func (s *Slice) Copy() []byte {
+	r := make([]byte, s.size)
+	copy(r, s.Data())
+	s.Free()
+	return r
+}
+
 // PinnableSliceHandle represents a handle to a PinnableSlice.
 type PinnableSliceHandle struct {
 	c *C.rocksdb_pinnableslice_t
