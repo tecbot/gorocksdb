@@ -688,6 +688,26 @@ func (db *DB) DeleteFile(name string) {
 	C.rocksdb_delete_file(db.c, cName)
 }
 
+func (db *DB) DeleteFileInRange(beginKey []byte, limitKey []byte) error {
+	cBeginKey := byteToChar(beginKey)
+	cLimitKey := byteToChar(limitKey)
+
+	var cErr *C.char
+
+	C.rocksdb_delete_file_in_range(
+		db.c,
+		cBeginKey, C.size_t(len(beginKey)),
+		cLimitKey, C.size_t(len(limitKey)),
+		&cErr,
+	)
+
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
 // IngestExternalFile loads a list of external SST files.
 func (db *DB) IngestExternalFile(filePaths []string, opts *IngestExternalFileOptions) error {
 	cFilePaths := make([]*C.char, len(filePaths))
