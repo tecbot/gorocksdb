@@ -1,6 +1,7 @@
 package gorocksdb
 
 // #include <stdlib.h>
+// #include "rocksdb/c.h"
 import "C"
 import "unsafe"
 
@@ -47,4 +48,31 @@ func (s *Slice) Free() {
 		C.free(unsafe.Pointer(s.data))
 		s.freed = true
 	}
+}
+
+// PinnableSliceHandle represents a handle to a PinnableSlice.
+type PinnableSliceHandle struct {
+	c *C.rocksdb_pinnableslice_t
+}
+
+// NewNativePinnableSliceHandle creates a PinnableSliceHandle object.
+func NewNativePinnableSliceHandle(c *C.rocksdb_pinnableslice_t) *PinnableSliceHandle {
+	return &PinnableSliceHandle{c}
+}
+
+// Data returns the data of the slice.
+func (h *PinnableSliceHandle) Data() []byte {
+	if h.c == nil {
+		return nil
+	}
+
+	var cValLen C.size_t
+	cValue := C.rocksdb_pinnableslice_value(h.c, &cValLen)
+
+	return charToByte(cValue, cValLen)
+}
+
+// Destroy calls the destructor of the underlying pinnable slice handle.
+func (h *PinnableSliceHandle) Destroy() {
+	C.rocksdb_pinnableslice_destroy(h.c)
 }

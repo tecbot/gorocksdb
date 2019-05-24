@@ -21,6 +21,7 @@ func TestDBCRUD(t *testing.T) {
 		givenKey  = []byte("hello")
 		givenVal1 = []byte("world1")
 		givenVal2 = []byte("world2")
+		givenVal3 = []byte("world2")
 		wo        = NewDefaultWriteOptions()
 		ro        = NewDefaultReadOptions()
 	)
@@ -41,11 +42,23 @@ func TestDBCRUD(t *testing.T) {
 	ensure.Nil(t, err)
 	ensure.DeepEqual(t, v2.Data(), givenVal2)
 
+	// retrieve pinned
+	v3, err := db.GetPinned(ro, givenKey)
+	defer v3.Destroy()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, v3.Data(), givenVal3)
+
 	// delete
 	ensure.Nil(t, db.Delete(wo, givenKey))
-	v3, err := db.Get(ro, givenKey)
+	v4, err := db.Get(ro, givenKey)
 	ensure.Nil(t, err)
-	ensure.True(t, v3.Data() == nil)
+	ensure.True(t, v4.Data() == nil)
+
+	// retrieve missing pinned
+	v5, err := db.GetPinned(ro, givenKey)
+	defer v5.Destroy()
+	ensure.Nil(t, err)
+	ensure.Nil(t, v5.Data())
 }
 
 func TestDBCRUDDBPaths(t *testing.T) {
@@ -171,4 +184,43 @@ func TestDBMultiGet(t *testing.T) {
 	ensure.DeepEqual(t, values[1].Data(), givenVal1)
 	ensure.DeepEqual(t, values[2].Data(), givenVal2)
 	ensure.DeepEqual(t, values[3].Data(), givenVal3)
+}
+
+func TestDBGetApproximateSizes(t *testing.T) {
+	db := newTestDB(t, "TestDBGetApproximateSizes", nil)
+	defer db.Close()
+
+	// no ranges
+	sizes := db.GetApproximateSizes(nil)
+	ensure.DeepEqual(t, len(sizes), 0)
+
+	// range will nil start and limit
+	sizes = db.GetApproximateSizes([]Range{{Start: nil, Limit: nil}})
+	ensure.DeepEqual(t, sizes, []uint64{0})
+
+	// valid range
+	sizes = db.GetApproximateSizes([]Range{{Start: []byte{0x00}, Limit: []byte{0xFF}}})
+	ensure.DeepEqual(t, sizes, []uint64{0})
+}
+
+func TestDBGetApproximateSizesCF(t *testing.T) {
+	db := newTestDB(t, "TestDBGetApproximateSizesCF", nil)
+	defer db.Close()
+
+	o := NewDefaultOptions()
+
+	cf, err := db.CreateColumnFamily(o, "other")
+	ensure.Nil(t, err)
+
+	// no ranges
+	sizes := db.GetApproximateSizesCF(cf, nil)
+	ensure.DeepEqual(t, len(sizes), 0)
+
+	// range will nil start and limit
+	sizes = db.GetApproximateSizesCF(cf, []Range{{Start: nil, Limit: nil}})
+	ensure.DeepEqual(t, sizes, []uint64{0})
+
+	// valid range
+	sizes = db.GetApproximateSizesCF(cf, []Range{{Start: []byte{0x00}, Limit: []byte{0xFF}}})
+	ensure.DeepEqual(t, sizes, []uint64{0})
 }

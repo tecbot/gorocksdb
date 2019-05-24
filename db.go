@@ -42,6 +42,25 @@ func OpenDb(opts *Options, name string) (*DB, error) {
 	}, nil
 }
 
+// OpenDbWithTTL opens a database with TTL support with the specified options.
+func OpenDbWithTTL(opts *Options, name string, ttl int) (*DB, error) {
+	var (
+		cErr  *C.char
+		cName = C.CString(name)
+	)
+	defer C.free(unsafe.Pointer(cName))
+	db := C.rocksdb_open_with_ttl(opts.c, cName, C.int(ttl), &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return &DB{
+		name: name,
+		c:    db,
+		opts: opts,
+	}, nil
+}
+
 // OpenDbForReadOnly opens a database with the specified options for readonly usage.
 func OpenDbForReadOnly(opts *Options, name string, errorIfLogFileExist bool) (*DB, error) {
 	var (
@@ -262,6 +281,20 @@ func (db *DB) GetCF(opts *ReadOptions, cf *ColumnFamilyHandle, key []byte) (*Sli
 		return nil, errors.New(C.GoString(cErr))
 	}
 	return NewSlice(cValue, cValLen), nil
+}
+
+// GetPinned returns the data associated with the key from the database.
+func (db *DB) GetPinned(opts *ReadOptions, key []byte) (*PinnableSliceHandle, error) {
+	var (
+		cErr *C.char
+		cKey = byteToChar(key)
+	)
+	cHandle := C.rocksdb_get_pinned(db.c, opts.c, cKey, C.size_t(len(key)), &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return NewNativePinnableSliceHandle(cHandle), nil
 }
 
 // MultiGet returns the data associated with the passed keys from the database
@@ -543,11 +576,18 @@ func (db *DB) GetApproximateSizes(ranges []Range) []uint64 {
 	cStartLens := make([]C.size_t, len(ranges))
 	cLimitLens := make([]C.size_t, len(ranges))
 	for i, r := range ranges {
-		cStarts[i] = byteToChar(r.Start)
+		cStarts[i] = (*C.char)(C.CBytes(r.Start))
 		cStartLens[i] = C.size_t(len(r.Start))
-		cLimits[i] = byteToChar(r.Limit)
+		cLimits[i] = (*C.char)(C.CBytes(r.Limit))
 		cLimitLens[i] = C.size_t(len(r.Limit))
 	}
+
+	defer func() {
+		for i := range ranges {
+			C.free(unsafe.Pointer(cStarts[i]))
+			C.free(unsafe.Pointer(cLimits[i]))
+		}
+	}()
 
 	C.rocksdb_approximate_sizes(
 		db.c,
@@ -577,11 +617,18 @@ func (db *DB) GetApproximateSizesCF(cf *ColumnFamilyHandle, ranges []Range) []ui
 	cStartLens := make([]C.size_t, len(ranges))
 	cLimitLens := make([]C.size_t, len(ranges))
 	for i, r := range ranges {
-		cStarts[i] = byteToChar(r.Start)
+		cStarts[i] = (*C.char)(C.CBytes(r.Start))
 		cStartLens[i] = C.size_t(len(r.Start))
-		cLimits[i] = byteToChar(r.Limit)
+		cLimits[i] = (*C.char)(C.CBytes(r.Limit))
 		cLimitLens[i] = C.size_t(len(r.Limit))
 	}
+
+	defer func() {
+		for i := range ranges {
+			C.free(unsafe.Pointer(cStarts[i]))
+			C.free(unsafe.Pointer(cLimits[i]))
+		}
+	}()
 
 	C.rocksdb_approximate_sizes_cf(
 		db.c,
@@ -594,6 +641,37 @@ func (db *DB) GetApproximateSizesCF(cf *ColumnFamilyHandle, ranges []Range) []ui
 		(*C.uint64_t)(&sizes[0]))
 
 	return sizes
+}
+
+// SetOptions dynamically changes options through the SetOptions API.
+func (db *DB) SetOptions(keys, values []string) error {
+	num_keys := len(keys)
+
+	if num_keys == 0 {
+		return nil
+	}
+
+	cKeys := make([]*C.char, num_keys)
+	cValues := make([]*C.char, num_keys)
+	for i := range keys {
+		cKeys[i] = C.CString(keys[i])
+		cValues[i] = C.CString(values[i])
+	}
+
+	var cErr *C.char
+
+	C.rocksdb_set_options(
+		db.c,
+		C.int(num_keys),
+		&cKeys[0],
+		&cValues[0],
+		&cErr,
+	)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
 }
 
 // LiveFileMetadata is a metadata which is associated with each SST file.

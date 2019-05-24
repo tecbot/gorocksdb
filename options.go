@@ -3,7 +3,10 @@ package gorocksdb
 // #include "rocksdb/c.h"
 // #include "gorocksdb.h"
 import "C"
-import "unsafe"
+import (
+	"errors"
+	"unsafe"
+)
 
 // CompressionType specifies the block compression.
 // DB contents are stored in a set of blocks, each of which holds a
@@ -80,6 +83,30 @@ func NewDefaultOptions() *Options {
 // NewNativeOptions creates a Options object.
 func NewNativeOptions(c *C.rocksdb_options_t) *Options {
 	return &Options{c: c}
+}
+
+// GetOptionsFromString creates a Options object from existing opt and string.
+// If base is nil, a default opt create by NewDefaultOptions will be used as base opt.
+func GetOptionsFromString(base *Options, optStr string) (*Options, error) {
+	if base == nil {
+		base = NewDefaultOptions()
+		defer base.Destroy()
+	}
+
+	var (
+		cErr    *C.char
+		cOptStr = C.CString(optStr)
+	)
+	defer C.free(unsafe.Pointer(cOptStr))
+
+	newOpt := NewDefaultOptions()
+	C.rocksdb_get_options_from_string(base.c, cOptStr, newOpt.c, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+
+	return newOpt, nil
 }
 
 // -------------------
@@ -935,6 +962,13 @@ func (opts *Options) SetUniversalCompactionOptions(value *UniversalCompactionOpt
 // Default: nil
 func (opts *Options) SetFIFOCompactionOptions(value *FIFOCompactionOptions) {
 	C.rocksdb_options_set_fifo_compaction_options(opts.c, value.c)
+}
+
+// GetStatisticsString returns the statistics as a string.
+func (opts *Options) GetStatisticsString() string {
+	sString := C.rocksdb_options_statistics_get_string(opts.c)
+	defer C.free(unsafe.Pointer(sString))
+	return C.GoString(sString)
 }
 
 // SetRateLimiter sets the rate limiter of the options.
