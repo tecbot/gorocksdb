@@ -504,13 +504,13 @@ func (db *DB) NewIteratorCF(opts *ReadOptions, cf *ColumnFamilyHandle) *Iterator
 	return NewNativeIterator(unsafe.Pointer(cIter))
 }
 
-func (db *DB) GetUpdatesSince (seq_number uint64) *WalIterator {
+func (db *DB) GetUpdatesSince(seqNumber uint64) *WalIterator {
 	var cErr *C.char
-	cIter := C.rocksdb_get_updates_since(db.c, C.uint64_t(seq_number), nil, &cErr)
+	cIter := C.rocksdb_get_updates_since(db.c, C.uint64_t(seqNumber), nil, &cErr)
 	return NewNativeWalIterator(unsafe.Pointer(cIter))
 }
 
-func (db *DB) GetLatestSequenceNumber () uint64 {
+func (db *DB) GetLatestSequenceNumber() uint64 {
 	return uint64(C.rocksdb_get_latest_sequence_number(db.c))
 }
 

@@ -1,8 +1,10 @@
 package gorocksdb
+
 // #include <stdlib.h>
 // #include "rocksdb/c.h"
 import "C"
 import (
+	"errors"
 	"unsafe"
 )
 
@@ -22,14 +24,14 @@ func (iter *WalIterator) Next() {
 	C.rocksdb_wal_iter_next(iter.c)
 }
 
-func (iter *WalIterator) Status() string {
-	var cErr  *C.char
+func (iter *WalIterator) Err() error {
+	var cErr *C.char
 	C.rocksdb_wal_iter_status(iter.c, &cErr)
 	if cErr != nil {
 		defer C.free(unsafe.Pointer(cErr))
-		return C.GoString(cErr)
+		return errors.New(C.GoString(cErr))
 	}
-	return "unknown"
+	return nil
 }
 
 func (iter *WalIterator) Destroy() {
@@ -37,7 +39,7 @@ func (iter *WalIterator) Destroy() {
 	iter.c = nil
 }
 
-func (iter *WalIterator) Batch() (*WriteBatch, uint64) {
+func (iter *WalIterator) GetBatch() (*WriteBatch, uint64) {
 	var cSeq C.uint64_t
 	cB := C.rocksdb_wal_iter_get_batch(iter.c, &cSeq)
 	return NewNativeWriteBatch(cB), uint64(cSeq)
