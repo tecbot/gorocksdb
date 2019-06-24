@@ -829,6 +829,13 @@ func (opts *Options) SetWalSizeLimitMb(value uint64) {
 	C.rocksdb_options_set_WAL_size_limit_MB(opts.c, C.uint64_t(value))
 }
 
+// SetEnablePipelinedWrite enables pipelined write
+//
+// Default: false
+func (opts *Options) SetEnablePipelinedWrite(value bool) {
+	C.rocksdb_options_set_enable_pipelined_write(opts.c, boolToChar(value))
+}
+
 // SetManifestPreallocationSize sets the number of bytes
 // to preallocate (via fallocate) the manifest files.
 //
