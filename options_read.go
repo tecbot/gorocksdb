@@ -1,5 +1,6 @@
 package gorocksdb
 
+// #include <stdlib.h>
 // #include "rocksdb/c.h"
 import "C"
 import "unsafe"
@@ -23,7 +24,8 @@ const (
 // ReadOptions represent all of the available options when reading from a
 // database.
 type ReadOptions struct {
-	c *C.rocksdb_readoptions_t
+	c                  *C.rocksdb_readoptions_t
+	cIterateUpperBound *C.char
 }
 
 // NewDefaultReadOptions creates a default ReadOptions object.
@@ -33,7 +35,7 @@ func NewDefaultReadOptions() *ReadOptions {
 
 // NewNativeReadOptions creates a ReadOptions object.
 func NewNativeReadOptions(c *C.rocksdb_readoptions_t) *ReadOptions {
-	return &ReadOptions{c}
+	return &ReadOptions{c: c}
 }
 
 // UnsafeGetReadOptions returns the underlying c read options object.
@@ -104,9 +106,15 @@ func (opts *ReadOptions) SetTailing(value bool) {
 // implemented.
 // Default: nullptr
 func (opts *ReadOptions) SetIterateUpperBound(key []byte) {
-	cKey := byteToChar(key)
+	C.free(unsafe.Pointer(opts.cIterateUpperBound))
+	if key == nil {
+		opts.cIterateUpperBound = nil
+	} else {
+		opts.cIterateUpperBound = cByteSlice(key)
+	}
+
 	cKeyLen := C.size_t(len(key))
-	C.rocksdb_readoptions_set_iterate_upper_bound(opts.c, cKey, cKeyLen)
+	C.rocksdb_readoptions_set_iterate_upper_bound(opts.c, opts.cIterateUpperBound, cKeyLen)
 }
 
 // SetPinData specifies the value of "pin_data". If true, it keeps the blocks
@@ -132,5 +140,6 @@ func (opts *ReadOptions) SetReadaheadSize(value uint64) {
 // Destroy deallocates the ReadOptions object.
 func (opts *ReadOptions) Destroy() {
 	C.rocksdb_readoptions_destroy(opts.c)
-	opts.c = nil
+	C.free(unsafe.Pointer(opts.cIterateUpperBound))
+	*opts = ReadOptions{}
 }
