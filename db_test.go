@@ -19,9 +19,8 @@ func TestDBCRUD(t *testing.T) {
 
 	var (
 		givenKey  = []byte("hello")
-		givenVal1 = []byte("world1")
-		givenVal2 = []byte("world2")
-		givenVal3 = []byte("world2")
+		givenVal1 = []byte("")
+		givenVal2 = []byte("world1")
 		wo        = NewDefaultWriteOptions()
 		ro        = NewDefaultReadOptions()
 	)
@@ -46,7 +45,7 @@ func TestDBCRUD(t *testing.T) {
 	v3, err := db.GetPinned(ro, givenKey)
 	defer v3.Destroy()
 	ensure.Nil(t, err)
-	ensure.DeepEqual(t, v3.Data(), givenVal3)
+	ensure.DeepEqual(t, v3.Data(), givenVal2)
 
 	// delete
 	ensure.Nil(t, db.Delete(wo, givenKey))
@@ -58,7 +57,7 @@ func TestDBCRUD(t *testing.T) {
 	v5, err := db.GetPinned(ro, givenKey)
 	defer v5.Destroy()
 	ensure.Nil(t, err)
-	ensure.Nil(t, v5.Data())
+	ensure.True(t, v5.Data() == nil)
 }
 
 func TestDBCRUDDBPaths(t *testing.T) {
@@ -75,11 +74,19 @@ func TestDBCRUDDBPaths(t *testing.T) {
 
 	var (
 		givenKey  = []byte("hello")
-		givenVal1 = []byte("world1")
-		givenVal2 = []byte("world2")
+		givenVal1 = []byte("")
+		givenVal2 = []byte("world1")
+		givenVal3 = []byte("world2")
 		wo        = NewDefaultWriteOptions()
 		ro        = NewDefaultReadOptions()
 	)
+
+	// retrieve before create
+	noexist, err := db.Get(ro, givenKey)
+	defer noexist.Free()
+	ensure.Nil(t, err)
+	ensure.False(t, noexist.Exists())
+	ensure.DeepEqual(t, noexist.Data(), []byte(nil))
 
 	// create
 	ensure.Nil(t, db.Put(wo, givenKey, givenVal1))
@@ -88,6 +95,7 @@ func TestDBCRUDDBPaths(t *testing.T) {
 	v1, err := db.Get(ro, givenKey)
 	defer v1.Free()
 	ensure.Nil(t, err)
+	ensure.True(t, v1.Exists())
 	ensure.DeepEqual(t, v1.Data(), givenVal1)
 
 	// update
@@ -95,13 +103,24 @@ func TestDBCRUDDBPaths(t *testing.T) {
 	v2, err := db.Get(ro, givenKey)
 	defer v2.Free()
 	ensure.Nil(t, err)
+	ensure.True(t, v2.Exists())
 	ensure.DeepEqual(t, v2.Data(), givenVal2)
+
+	// update
+	ensure.Nil(t, db.Put(wo, givenKey, givenVal3))
+	v3, err := db.Get(ro, givenKey)
+	defer v3.Free()
+	ensure.Nil(t, err)
+	ensure.True(t, v3.Exists())
+	ensure.DeepEqual(t, v3.Data(), givenVal3)
 
 	// delete
 	ensure.Nil(t, db.Delete(wo, givenKey))
-	v3, err := db.Get(ro, givenKey)
+	v4, err := db.Get(ro, givenKey)
+	defer v4.Free()
 	ensure.Nil(t, err)
-	ensure.True(t, v3.Data() == nil)
+	ensure.False(t, v4.Exists())
+	ensure.DeepEqual(t, v4.Data(), []byte(nil))
 }
 
 func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
