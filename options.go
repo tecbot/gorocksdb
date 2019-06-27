@@ -60,6 +60,15 @@ const (
 	FatalInfoLogLevel = InfoLogLevel(4)
 )
 
+type WALRecoveryMode int
+
+const (
+	TolerateCorruptedTailRecords = 0
+	AbsoluteConsistency          = 1
+	PointInTime                  = 2
+	SkipAnyCorruptedRecords      = 3
+)
+
 // Options represent all of the available options when opening a database with Open.
 type Options struct {
 	c *C.rocksdb_options_t
@@ -799,6 +808,14 @@ func (opts *Options) SetArenaBlockSize(value int) {
 // Default: false
 func (opts *Options) SetDisableAutoCompactions(value bool) {
 	C.rocksdb_options_set_disable_auto_compactions(opts.c, C.int(btoi(value)))
+}
+
+// SetWALRecoveryMode sets the recovery mode
+//
+// Recovery mode to control the consistency while replaying WAL
+// Default: PointInTime
+func (opts *Options) SetWALRecoveryMode(mode WALRecoveryMode) {
+	C.rocksdb_options_set_wal_recovery_mode(opts.c, C.int(mode))
 }
 
 // SetWALTtlSeconds sets the WAL ttl in seconds.
