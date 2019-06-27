@@ -63,10 +63,10 @@ const (
 type WALRecoveryMode int
 
 const (
-	TolerateCorruptedTailRecords = 0
-	AbsoluteConsistency          = 1
-	PointInTime                  = 2
-	SkipAnyCorruptedRecords      = 3
+	TolerateCorruptedTailRecordsRecovery = 0
+	AbsoluteConsistencyRecovery          = 1
+	PointInTimeRecovery                  = 2
+	SkipAnyCorruptedRecordsRecovery      = 3
 )
 
 // Options represent all of the available options when opening a database with Open.
@@ -813,7 +813,7 @@ func (opts *Options) SetDisableAutoCompactions(value bool) {
 // SetWALRecoveryMode sets the recovery mode
 //
 // Recovery mode to control the consistency while replaying WAL
-// Default: PointInTime
+// Default: PointInTimeRecovery
 func (opts *Options) SetWALRecoveryMode(mode WALRecoveryMode) {
 	C.rocksdb_options_set_wal_recovery_mode(opts.c, C.int(mode))
 }
