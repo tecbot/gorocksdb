@@ -342,7 +342,7 @@ func (opts *Options) OptimizeUniversalStyleCompaction(memtable_memory_budget uin
 // so you may wish to adjust this parameter to control memory usage.
 // Also, a larger write buffer will result in a longer recovery time
 // the next time the database is opened.
-// Default: 4MB
+// Default: 64MB
 func (opts *Options) SetWriteBufferSize(value int) {
 	C.rocksdb_options_set_write_buffer_size(opts.c, C.size_t(value))
 }
