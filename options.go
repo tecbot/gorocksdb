@@ -60,6 +60,15 @@ const (
 	FatalInfoLogLevel = InfoLogLevel(4)
 )
 
+type WALRecoveryMode int
+
+const (
+	TolerateCorruptedTailRecordsRecovery = 0
+	AbsoluteConsistencyRecovery          = 1
+	PointInTimeRecovery                  = 2
+	SkipAnyCorruptedRecordsRecovery      = 3
+)
+
 // Options represent all of the available options when opening a database with Open.
 type Options struct {
 	c *C.rocksdb_options_t
@@ -801,6 +810,14 @@ func (opts *Options) SetDisableAutoCompactions(value bool) {
 	C.rocksdb_options_set_disable_auto_compactions(opts.c, C.int(btoi(value)))
 }
 
+// SetWALRecoveryMode sets the recovery mode
+//
+// Recovery mode to control the consistency while replaying WAL
+// Default: PointInTimeRecovery
+func (opts *Options) SetWALRecoveryMode(mode WALRecoveryMode) {
+	C.rocksdb_options_set_wal_recovery_mode(opts.c, C.int(mode))
+}
+
 // SetWALTtlSeconds sets the WAL ttl in seconds.
 //
 // The following two options affect how archived logs will be deleted.
@@ -827,6 +844,13 @@ func (opts *Options) SetWALTtlSeconds(value uint64) {
 // Default: 0
 func (opts *Options) SetWalSizeLimitMb(value uint64) {
 	C.rocksdb_options_set_WAL_size_limit_MB(opts.c, C.uint64_t(value))
+}
+
+// SetEnablePipelinedWrite enables pipelined write
+//
+// Default: false
+func (opts *Options) SetEnablePipelinedWrite(value bool) {
+	C.rocksdb_options_set_enable_pipelined_write(opts.c, boolToChar(value))
 }
 
 // SetManifestPreallocationSize sets the number of bytes
