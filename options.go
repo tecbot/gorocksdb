@@ -1166,6 +1166,17 @@ func (opts *Options) SetAllowIngestBehind(value bool) {
 	C.rocksdb_options_set_allow_ingest_behind(opts.c, boolToChar(value))
 }
 
+// SetMemTablePrefixBloomSizeRatio sets memtable_prefix_bloom_size_ratio
+// if prefix_extractor is set and memtable_prefix_bloom_size_ratio is not 0,
+// create prefix bloom for memtable with the size of
+// write_buffer_size * memtable_prefix_bloom_size_ratio.
+// If it is larger than 0.25, it is sanitized to 0.25.
+//
+// Default: 0 (disable)
+func (opts *Options) SetMemTablePrefixBloomSizeRatio(value float64) {
+	C.rocksdb_options_set_memtable_prefix_bloom_size_ratio(opts.c, C.double(value))
+}
+
 // Destroy deallocates the Options object.
 func (opts *Options) Destroy() {
 	C.rocksdb_options_destroy(opts.c)
