@@ -35,6 +35,13 @@ func TestFixedPrefixTransformOpen(t *testing.T) {
 	defer db.Close()
 }
 
+func TestNewNoopPrefixTransform(t *testing.T) {
+	db := newTestDB(t, "TestNewNoopPrefixTransform", func(opts *Options) {
+		opts.SetPrefixExtractor(NewNoopPrefixTransform())
+	})
+	defer db.Close()
+}
+
 type testSliceTransform struct {
 	initiated bool
 }
