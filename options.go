@@ -1177,6 +1177,25 @@ func (opts *Options) SetMemTablePrefixBloomSizeRatio(value float64) {
 	C.rocksdb_options_set_memtable_prefix_bloom_size_ratio(opts.c, C.double(value))
 }
 
+// SetOptimizeFiltersForHits sets optimize_filters_for_hits
+// This flag specifies that the implementation should optimize the filters
+// mainly for cases where keys are found rather than also optimize for keys
+// missed. This would be used in cases where the application knows that
+// there are very few misses or the performance in the case of misses is not
+// important.
+//
+// For now, this flag allows us to not store filters for the last level i.e
+// the largest level which contains data of the LSM store. For keys which
+// are hits, the filters in this level are not useful because we will search
+// for the data anyway. NOTE: the filters in other levels are still useful
+// even for key hit because they tell us whether to look in that level or go
+// to the higher level.
+//
+// Default: false
+func (opts *Options) SetOptimizeFiltersForHits(value bool) {
+	C.rocksdb_options_set_optimize_filters_for_hits(opts.c, C.boolToChar(value))
+}
+
 // Destroy deallocates the Options object.
 func (opts *Options) Destroy() {
 	C.rocksdb_options_destroy(opts.c)
