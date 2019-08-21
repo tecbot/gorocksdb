@@ -41,6 +41,12 @@ func (wb *WriteBatch) PutCF(cf *ColumnFamilyHandle, key, value []byte) {
 	C.rocksdb_writebatch_put_cf(wb.c, cf.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)))
 }
 
+// Append a blob of arbitrary size to the records in this batch.
+func (wb *WriteBatch) PutLogData(blob []byte) {
+	cBlob := byteToChar(blob)
+	C.rocksdb_writebatch_put_log_data(wb.c, cBlob, C.size_t(len(blob)))
+}
+
 // Merge queues a merge of "value" with the existing value of "key".
 func (wb *WriteBatch) Merge(key, value []byte) {
 	cKey := byteToChar(key)
