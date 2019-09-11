@@ -28,21 +28,6 @@ type MergeOperator interface {
 	// internal corruption. This will be treated as an error by the library.
 	FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool)
 
-	// This function performs merge(left_op, right_op)
-	// when both the operands are themselves merge operation types
-	// that you would have passed to a db.Merge() call in the same order
-	// (i.e.: db.Merge(key,left_op), followed by db.Merge(key,right_op)).
-	//
-	// PartialMerge should combine them into a single merge operation.
-	// The return value should be constructed such that a call to
-	// db.Merge(key, new_value) would yield the same result as a call
-	// to db.Merge(key, left_op) followed by db.Merge(key, right_op).
-	//
-	// If it is impossible or infeasible to combine the two operations, return false.
-	// The library will internally keep track of the operations, and apply them in the
-	// correct order once a base-value (a Put/Delete/End-of-Database) is seen.
-	PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool)
-
 	// This function performs merge on multiple operands
 	// when all of the operands are themselves merge operation types
 	// that you would have passed to a db.Merge() call in the same order
@@ -60,7 +45,7 @@ type MergeOperator interface {
 	// PartialMergeMulti returns false.
 	// The library will internally keep track of the operations, and apply them in the
 	// correct order once a base-value (a Put/Delete/End-of-Database) is seen.
-	PartialMergeMulti(key []byte, operands [][]byte) ([]byte, bool)
+	PartialMerge(key []byte, operands [][]byte) ([]byte, bool)
 
 	// The name of the MergeOperator.
 	Name() string
@@ -78,10 +63,7 @@ type nativeMergeOperator struct {
 func (mo nativeMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
 	return nil, false
 }
-func (mo nativeMergeOperator) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) {
-	return nil, false
-}
-func (mo nativeMergeOperator) PartialMergeMulti(key []byte, operands [][]byte) ([]byte, bool) {
+func (mo nativeMergeOperator) PartialMerge(key []byte, operands [][]byte) ([]byte, bool) {
 	return nil, false
 }
 func (mo nativeMergeOperator) Name() string { return "" }
@@ -131,19 +113,7 @@ func gorocksdb_mergeoperator_partial_merge_multi(idx int, cKey *C.char, cKeyLen 
 	var newValue []byte
 	success := true
 
-	merger := mergeOperators.Get(idx).(mergeOperatorWrapper).mergeOperator
-	// attempt a merge multi operation, otherwise use partial merge
-	newValue, success = merger.PartialMergeMulti(key, operands)
-	if !success {
-		leftOperand := operands[0]
-		for i := 1; i < int(cNumOperands); i++ {
-			newValue, success = merger.PartialMerge(key, leftOperand, operands[i])
-			if !success {
-				break
-			}
-			leftOperand = newValue
-		}
-	}
+	newValue, success = mergeOperators.Get(idx).(mergeOperatorWrapper).mergeOperator.PartialMerge(key, operands)
 
 	newValueLen := len(newValue)
 	*cNewValueLen = C.size_t(newValueLen)
