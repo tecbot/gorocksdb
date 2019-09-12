@@ -3,11 +3,10 @@ package gorocksdb
 // #include "rocksdb/c.h"
 import "C"
 
-// MergeMultiOperator is similar to a MergeOperator but implements PartialMergeMulti
-// When given a MergeMultiOperator, the PartialMergeMulti will always
-// be used instead of PartialMerge
+// MergeMultiOperator implements PartialMergeMulti(key []byte, operands [][]byte) ([]byte, err)
+// When a MergeOperator implements this interface, PartialMergeMulti
+// will be used instead of PartialMerge
 type MergeMultiOperator interface {
-	MergeOperator
 	// PartialMerge performs merge on multiple operands
 	// when all of the operands are themselves merge operation types
 	// that you would have passed to a db.Merge() call in the same order
