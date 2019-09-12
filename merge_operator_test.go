@@ -41,14 +41,14 @@ func TestMergeOperator(t *testing.T) {
 }
 
 type mockMergeOperator struct {
-	fullMerge         func(key, existingValue []byte, operands [][]byte) ([]byte, bool)
-	partialMergeMulti func(key []byte, operands [][]byte) ([]byte, bool)
+	fullMerge    func(key, existingValue []byte, operands [][]byte) ([]byte, bool)
+	partialMerge func(key, leftOperand, rightOperand []byte) ([]byte, bool)
 }
 
 func (m *mockMergeOperator) Name() string { return "gorocksdb.test" }
 func (m *mockMergeOperator) FullMerge(key, existingValue []byte, operands [][]byte) ([]byte, bool) {
 	return m.fullMerge(key, existingValue, operands)
 }
-func (m *mockMergeOperator) PartialMergeMulti(key []byte, operands [][]byte) ([]byte, bool) {
-	return m.partialMergeMulti(key, operands)
+func (m *mockMergeOperator) PartialMerge(key, leftOperand, rightOperand []byte) ([]byte, bool) {
+	return m.partialMerge(key, leftOperand, rightOperand)
 }
