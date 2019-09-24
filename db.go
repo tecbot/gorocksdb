@@ -780,7 +780,7 @@ func (db *DB) DeleteFile(name string) {
 	C.rocksdb_delete_file(db.c, cName)
 }
 
-// DeleteFileInRange deletes SST files that contain keys between the Range, [r.Start, limitKey]
+// DeleteFileInRange deletes SST files that contain keys between the Range, [r.Start, r.Limit]
 func (db *DB) DeleteFileInRange(r Range) error {
 	cStartKey := byteToChar(r.Start)
 	cLimitKey := byteToChar(r.Limit)
