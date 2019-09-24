@@ -216,7 +216,10 @@ func ListColumnFamilies(opts *Options, name string) ([]string, error) {
 	}
 	namesLen := int(cLen)
 	names := make([]string, namesLen)
-	cNamesArr := (*[1 << 30]*C.char)(unsafe.Pointer(cNames))[:namesLen:namesLen]
+	// The maximum capacity of the following two slices is limited to (2^29)-1 to remain compatible
+	// with 32-bit platforms. The size of a `*C.char` (a pointer) is 4 Byte on a 32-bit system
+	// and (2^29)*4 == math.MaxInt32 + 1. -- See issue golang/go#13656
+	cNamesArr := (*[(1 << 29) - 1]*C.char)(unsafe.Pointer(cNames))[:namesLen:namesLen]
 	for i, n := range cNamesArr {
 		names[i] = C.GoString(n)
 	}
