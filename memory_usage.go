@@ -42,7 +42,7 @@ func GetApproximateMemoryUsageByType(dbs []*DB, caches []*Cache) (*MemoryUsage, 
 	var cErr *C.char
 	memoryUsage := C.rocksdb_approximate_memory_usage_create(consumers, &cErr)
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
 	}
 

@@ -51,7 +51,7 @@ func OpenDbWithTTL(opts *Options, name string, ttl int) (*DB, error) {
 	defer C.free(unsafe.Pointer(cName))
 	db := C.rocksdb_open_with_ttl(opts.c, cName, C.int(ttl), &cErr)
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
 	}
 	return &DB{
@@ -267,7 +267,7 @@ func (db *DB) GetBytes(opts *ReadOptions, key []byte) ([]byte, error) {
 	if cValue == nil {
 		return nil, nil
 	}
-	defer C.free(unsafe.Pointer(cValue))
+	defer C.rocksdb_free(unsafe.Pointer(cValue))
 	return C.GoBytes(unsafe.Pointer(cValue), C.int(cValLen)), nil
 }
 
@@ -294,7 +294,7 @@ func (db *DB) GetPinned(opts *ReadOptions, key []byte) (*PinnableSliceHandle, er
 	)
 	cHandle := C.rocksdb_get_pinned(db.c, opts.c, cKey, C.size_t(len(key)), &cErr)
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
 	}
 	return NewNativePinnableSliceHandle(cHandle), nil
@@ -323,7 +323,7 @@ func (db *DB) MultiGet(opts *ReadOptions, keys ...[]byte) (Slices, error) {
 
 	for i, rocksErr := range rocksErrs {
 		if rocksErr != nil {
-			defer C.free(unsafe.Pointer(rocksErr))
+			defer C.rocksdb_free(unsafe.Pointer(rocksErr))
 			err := fmt.Errorf("getting %q failed: %v", string(keys[i]), C.GoString(rocksErr))
 			errs = append(errs, err)
 		}
@@ -375,7 +375,7 @@ func (db *DB) MultiGetCFMultiCF(opts *ReadOptions, cfs ColumnFamilyHandles, keys
 
 	for i, rocksErr := range rocksErrs {
 		if rocksErr != nil {
-			defer C.free(unsafe.Pointer(rocksErr))
+			defer C.rocksdb_free(unsafe.Pointer(rocksErr))
 			err := fmt.Errorf("getting %q failed: %v", string(keys[i]), C.GoString(rocksErr))
 			errs = append(errs, err)
 		}
@@ -511,7 +511,7 @@ func (db *DB) GetUpdatesSince(seqNumber uint64) (*WalIterator, error) {
 	var cErr *C.char
 	cIter := C.rocksdb_get_updates_since(db.c, C.uint64_t(seqNumber), nil, &cErr)
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
 	}
 	return NewNativeWalIterator(unsafe.Pointer(cIter)), nil
@@ -538,7 +538,7 @@ func (db *DB) GetProperty(propName string) string {
 	cprop := C.CString(propName)
 	defer C.free(unsafe.Pointer(cprop))
 	cValue := C.rocksdb_property_value(db.c, cprop)
-	defer C.free(unsafe.Pointer(cValue))
+	defer C.rocksdb_free(unsafe.Pointer(cValue))
 	return C.GoString(cValue)
 }
 
@@ -685,7 +685,7 @@ func (db *DB) SetOptions(keys, values []string) error {
 		&cErr,
 	)
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return errors.New(C.GoString(cErr))
 	}
 	return nil
@@ -798,7 +798,7 @@ func (db *DB) DeleteFileInRange(r Range) error {
 	)
 
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return errors.New(C.GoString(cErr))
 	}
 	return nil
@@ -821,7 +821,7 @@ func (db *DB) DeleteFileInRangeCF(cf *ColumnFamilyHandle, r Range) error {
 	)
 
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return errors.New(C.GoString(cErr))
 	}
 	return nil

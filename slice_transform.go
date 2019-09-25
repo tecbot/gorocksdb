@@ -25,7 +25,7 @@ func NewFixedPrefixTransform(prefixLen int) SliceTransform {
 
 // NewNoopPrefixTransform creates a new no-op prefix transform.
 func NewNoopPrefixTransform() SliceTransform {
-   return NewNativeSliceTransform(C.rocksdb_slicetransform_create_noop())
+	return NewNativeSliceTransform(C.rocksdb_slicetransform_create_noop())
 }
 
 // NewNativeSliceTransform creates a SliceTransform object.

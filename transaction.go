@@ -74,7 +74,7 @@ func (transaction *Transaction) GetForUpdate(opts *ReadOptions, key []byte) (*Sl
 		transaction.c, opts.c, cKey, C.size_t(len(key)), &cValLen, C.uchar(byte(1)) /*exclusive*/, &cErr,
 	)
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
 	}
 	return NewSlice(cValue, cValLen), nil
