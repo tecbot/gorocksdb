@@ -93,6 +93,35 @@ func TestTransactionDBCRUD(t *testing.T) {
 
 }
 
+func TestTransactionDBGetForUpdate(t *testing.T) {
+	lockTimeoutMilliSec := int64(50)
+	applyOpts := func(opts *Options, transactionDBOpts *TransactionDBOptions) {
+		transactionDBOpts.SetTransactionLockTimeout(lockTimeoutMilliSec)
+	}
+	db := newTestTransactionDB(t, "TestOpenTransactionDb", applyOpts)
+	defer db.Close()
+
+	var (
+		givenKey = []byte("hello")
+		givenVal = []byte("world")
+		wo       = NewDefaultWriteOptions()
+		ro       = NewDefaultReadOptions()
+		to       = NewDefaultTransactionOptions()
+	)
+
+	txn := db.TransactionBegin(wo, to, nil)
+	defer txn.Destroy()
+
+	v, err := txn.GetForUpdate(ro, givenKey)
+	defer v.Free()
+	ensure.Nil(t, err)
+
+	// expect lock timeout error to be thrown
+	if err := db.Put(wo, givenKey, givenVal); err == nil {
+		t.Error("expect locktime out error, got nil error")
+	}
+}
+
 func newTestTransactionDB(t *testing.T, name string, applyOpts func(opts *Options, transactionDBOpts *TransactionDBOptions)) *TransactionDB {
 	dir, err := ioutil.TempDir("", "gorockstransactiondb-"+name)
 	ensure.Nil(t, err)

@@ -39,6 +39,18 @@ func TestWriteBatch(t *testing.T) {
 	defer v2.Free()
 	ensure.Nil(t, err)
 	ensure.True(t, v2.Data() == nil)
+
+	// DeleteRange test
+	wb.Clear()
+	wb.DeleteRange(givenKey1, givenKey2)
+
+	// perform the batch
+	ensure.Nil(t, db.Write(wo, wb))
+
+	v1, err = db.Get(ro, givenKey1)
+	defer v1.Free()
+	ensure.Nil(t, err)
+	ensure.True(t, v1.Data() == nil)
 }
 
 func TestWriteBatchIterator(t *testing.T) {
@@ -61,13 +73,13 @@ func TestWriteBatchIterator(t *testing.T) {
 	iter := wb.NewIterator()
 	ensure.True(t, iter.Next())
 	record := iter.Record()
-	ensure.DeepEqual(t, record.Type, WriteBatchRecordTypeValue)
+	ensure.DeepEqual(t, record.Type, WriteBatchValueRecord)
 	ensure.DeepEqual(t, record.Key, givenKey1)
 	ensure.DeepEqual(t, record.Value, givenVal1)
 
 	ensure.True(t, iter.Next())
 	record = iter.Record()
-	ensure.DeepEqual(t, record.Type, WriteBatchRecordTypeDeletion)
+	ensure.DeepEqual(t, record.Type, WriteBatchDeletionRecord)
 	ensure.DeepEqual(t, record.Key, givenKey2)
 
 	// there shouldn't be any left
