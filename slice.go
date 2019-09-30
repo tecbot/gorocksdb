@@ -51,7 +51,7 @@ func (s *Slice) Exists() bool {
 // Free frees the slice data.
 func (s *Slice) Free() {
 	if !s.freed {
-		C.free(unsafe.Pointer(s.data))
+		C.rocksdb_free(unsafe.Pointer(s.data))
 		s.freed = true
 	}
 }

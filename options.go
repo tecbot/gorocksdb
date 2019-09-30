@@ -111,7 +111,7 @@ func GetOptionsFromString(base *Options, optStr string) (*Options, error) {
 	newOpt := NewDefaultOptions()
 	C.rocksdb_get_options_from_string(base.c, cOptStr, newOpt.c, &cErr)
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
 	}
 
@@ -991,7 +991,7 @@ func (opts *Options) SetFIFOCompactionOptions(value *FIFOCompactionOptions) {
 // GetStatisticsString returns the statistics as a string.
 func (opts *Options) GetStatisticsString() string {
 	sString := C.rocksdb_options_statistics_get_string(opts.c)
-	defer C.free(unsafe.Pointer(sString))
+	defer C.rocksdb_free(unsafe.Pointer(sString))
 	return C.GoString(sString)
 }
 
