@@ -216,7 +216,10 @@ func ListColumnFamilies(opts *Options, name string) ([]string, error) {
 	}
 	namesLen := int(cLen)
 	names := make([]string, namesLen)
-	cNamesArr := (*[1 << 30]*C.char)(unsafe.Pointer(cNames))[:namesLen:namesLen]
+	// The maximum capacity of the following two slices is limited to (2^29)-1 to remain compatible
+	// with 32-bit platforms. The size of a `*C.char` (a pointer) is 4 Byte on a 32-bit system
+	// and (2^29)*4 == math.MaxInt32 + 1. -- See issue golang/go#13656
+	cNamesArr := (*[(1 << 29) - 1]*C.char)(unsafe.Pointer(cNames))[:namesLen:namesLen]
 	for i, n := range cNamesArr {
 		names[i] = C.GoString(n)
 	}
@@ -504,6 +507,20 @@ func (db *DB) NewIteratorCF(opts *ReadOptions, cf *ColumnFamilyHandle) *Iterator
 	return NewNativeIterator(unsafe.Pointer(cIter))
 }
 
+func (db *DB) GetUpdatesSince(seqNumber uint64) (*WalIterator, error) {
+	var cErr *C.char
+	cIter := C.rocksdb_get_updates_since(db.c, C.uint64_t(seqNumber), nil, &cErr)
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return NewNativeWalIterator(unsafe.Pointer(cIter)), nil
+}
+
+func (db *DB) GetLatestSequenceNumber() uint64 {
+	return uint64(C.rocksdb_get_latest_sequence_number(db.c))
+}
+
 // NewSnapshot creates a new snapshot of the database.
 func (db *DB) NewSnapshot() *Snapshot {
 	cSnap := C.rocksdb_create_snapshot(db.c)
@@ -764,6 +781,50 @@ func (db *DB) DeleteFile(name string) {
 	cName := C.CString(name)
 	defer C.free(unsafe.Pointer(cName))
 	C.rocksdb_delete_file(db.c, cName)
+}
+
+// DeleteFileInRange deletes SST files that contain keys between the Range, [r.Start, r.Limit]
+func (db *DB) DeleteFileInRange(r Range) error {
+	cStartKey := byteToChar(r.Start)
+	cLimitKey := byteToChar(r.Limit)
+
+	var cErr *C.char
+
+	C.rocksdb_delete_file_in_range(
+		db.c,
+		cStartKey, C.size_t(len(r.Start)),
+		cLimitKey, C.size_t(len(r.Limit)),
+		&cErr,
+	)
+
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
+// DeleteFileInRangeCF deletes SST files that contain keys between the Range, [r.Start, r.Limit], and
+// belong to a given column family
+func (db *DB) DeleteFileInRangeCF(cf *ColumnFamilyHandle, r Range) error {
+	cStartKey := byteToChar(r.Start)
+	cLimitKey := byteToChar(r.Limit)
+
+	var cErr *C.char
+
+	C.rocksdb_delete_file_in_range_cf(
+		db.c,
+		cf.c,
+		cStartKey, C.size_t(len(r.Start)),
+		cLimitKey, C.size_t(len(r.Limit)),
+		&cErr,
+	)
+
+	if cErr != nil {
+		defer C.free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
 }
 
 // IngestExternalFile loads a list of external SST files.

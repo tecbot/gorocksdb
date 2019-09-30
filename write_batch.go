@@ -41,6 +41,12 @@ func (wb *WriteBatch) PutCF(cf *ColumnFamilyHandle, key, value []byte) {
 	C.rocksdb_writebatch_put_cf(wb.c, cf.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)))
 }
 
+// Append a blob of arbitrary size to the records in this batch.
+func (wb *WriteBatch) PutLogData(blob []byte) {
+	cBlob := byteToChar(blob)
+	C.rocksdb_writebatch_put_log_data(wb.c, cBlob, C.size_t(len(blob)))
+}
+
 // Merge queues a merge of "value" with the existing value of "key".
 func (wb *WriteBatch) Merge(key, value []byte) {
 	cKey := byteToChar(key)
@@ -66,6 +72,21 @@ func (wb *WriteBatch) Delete(key []byte) {
 func (wb *WriteBatch) DeleteCF(cf *ColumnFamilyHandle, key []byte) {
 	cKey := byteToChar(key)
 	C.rocksdb_writebatch_delete_cf(wb.c, cf.c, cKey, C.size_t(len(key)))
+}
+
+// DeleteRange deletes keys that are between [startKey, endKey)
+func (wb *WriteBatch) DeleteRange(startKey []byte, endKey []byte) {
+	cStartKey := byteToChar(startKey)
+	cEndKey := byteToChar(endKey)
+	C.rocksdb_writebatch_delete_range(wb.c, cStartKey, C.size_t(len(startKey)), cEndKey, C.size_t(len(endKey)))
+}
+
+// DeleteRangeCF deletes keys that are between [startKey, endKey) and
+// belong to a given column family
+func (wb *WriteBatch) DeleteRangeCF(cf *ColumnFamilyHandle, startKey []byte, endKey []byte) {
+	cStartKey := byteToChar(startKey)
+	cEndKey := byteToChar(endKey)
+	C.rocksdb_writebatch_delete_range_cf(wb.c, cf.c, cStartKey, C.size_t(len(startKey)), cEndKey, C.size_t(len(endKey)))
 }
 
 // Data returns the serialized version of this batch.
