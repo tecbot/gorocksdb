@@ -32,7 +32,8 @@ func StringToSlice(data string) *Slice {
 	return NewSlice(C.CString(data), C.size_t(len(data)))
 }
 
-// Data returns the data of the slice.
+// Data returns the data of the slice. If the key doesn't exist this will be a
+// nil slice.
 func (s *Slice) Data() []byte {
 	return charToByte(s.data, s.size)
 }
@@ -42,10 +43,15 @@ func (s *Slice) Size() int {
 	return int(s.size)
 }
 
+// Exists returns if the key exists
+func (s *Slice) Exists() bool {
+	return s.data != nil
+}
+
 // Free frees the slice data.
 func (s *Slice) Free() {
 	if !s.freed {
-		C.free(unsafe.Pointer(s.data))
+		C.rocksdb_free(unsafe.Pointer(s.data))
 		s.freed = true
 	}
 }

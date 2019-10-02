@@ -60,6 +60,15 @@ const (
 	FatalInfoLogLevel = InfoLogLevel(4)
 )
 
+type WALRecoveryMode int
+
+const (
+	TolerateCorruptedTailRecordsRecovery = WALRecoveryMode(0)
+	AbsoluteConsistencyRecovery          = WALRecoveryMode(1)
+	PointInTimeRecovery                  = WALRecoveryMode(2)
+	SkipAnyCorruptedRecordsRecovery      = WALRecoveryMode(3)
+)
+
 // Options represent all of the available options when opening a database with Open.
 type Options struct {
 	c *C.rocksdb_options_t
@@ -102,7 +111,7 @@ func GetOptionsFromString(base *Options, optStr string) (*Options, error) {
 	newOpt := NewDefaultOptions()
 	C.rocksdb_get_options_from_string(base.c, cOptStr, newOpt.c, &cErr)
 	if cErr != nil {
-		defer C.free(unsafe.Pointer(cErr))
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
 	}
 
@@ -333,7 +342,7 @@ func (opts *Options) OptimizeUniversalStyleCompaction(memtable_memory_budget uin
 // so you may wish to adjust this parameter to control memory usage.
 // Also, a larger write buffer will result in a longer recovery time
 // the next time the database is opened.
-// Default: 4MB
+// Default: 64MB
 func (opts *Options) SetWriteBufferSize(value int) {
 	C.rocksdb_options_set_write_buffer_size(opts.c, C.size_t(value))
 }
@@ -801,6 +810,14 @@ func (opts *Options) SetDisableAutoCompactions(value bool) {
 	C.rocksdb_options_set_disable_auto_compactions(opts.c, C.int(btoi(value)))
 }
 
+// SetWALRecoveryMode sets the recovery mode
+//
+// Recovery mode to control the consistency while replaying WAL
+// Default: TolerateCorruptedTailRecordsRecovery
+func (opts *Options) SetWALRecoveryMode(mode WALRecoveryMode) {
+	C.rocksdb_options_set_wal_recovery_mode(opts.c, C.int(mode))
+}
+
 // SetWALTtlSeconds sets the WAL ttl in seconds.
 //
 // The following two options affect how archived logs will be deleted.
@@ -827,6 +844,13 @@ func (opts *Options) SetWALTtlSeconds(value uint64) {
 // Default: 0
 func (opts *Options) SetWalSizeLimitMb(value uint64) {
 	C.rocksdb_options_set_WAL_size_limit_MB(opts.c, C.uint64_t(value))
+}
+
+// SetEnablePipelinedWrite enables pipelined write
+//
+// Default: false
+func (opts *Options) SetEnablePipelinedWrite(value bool) {
+	C.rocksdb_options_set_enable_pipelined_write(opts.c, boolToChar(value))
 }
 
 // SetManifestPreallocationSize sets the number of bytes
@@ -967,7 +991,7 @@ func (opts *Options) SetFIFOCompactionOptions(value *FIFOCompactionOptions) {
 // GetStatisticsString returns the statistics as a string.
 func (opts *Options) GetStatisticsString() string {
 	sString := C.rocksdb_options_statistics_get_string(opts.c)
-	defer C.free(unsafe.Pointer(sString))
+	defer C.rocksdb_free(unsafe.Pointer(sString))
 	return C.GoString(sString)
 }
 
@@ -1140,6 +1164,36 @@ func (opts *Options) SetBlockBasedTableFactory(value *BlockBasedTableOptions) {
 // Immutable.
 func (opts *Options) SetAllowIngestBehind(value bool) {
 	C.rocksdb_options_set_allow_ingest_behind(opts.c, boolToChar(value))
+}
+
+// SetMemTablePrefixBloomSizeRatio sets memtable_prefix_bloom_size_ratio
+// if prefix_extractor is set and memtable_prefix_bloom_size_ratio is not 0,
+// create prefix bloom for memtable with the size of
+// write_buffer_size * memtable_prefix_bloom_size_ratio.
+// If it is larger than 0.25, it is sanitized to 0.25.
+//
+// Default: 0 (disable)
+func (opts *Options) SetMemTablePrefixBloomSizeRatio(value float64) {
+	C.rocksdb_options_set_memtable_prefix_bloom_size_ratio(opts.c, C.double(value))
+}
+
+// SetOptimizeFiltersForHits sets optimize_filters_for_hits
+// This flag specifies that the implementation should optimize the filters
+// mainly for cases where keys are found rather than also optimize for keys
+// missed. This would be used in cases where the application knows that
+// there are very few misses or the performance in the case of misses is not
+// important.
+//
+// For now, this flag allows us to not store filters for the last level i.e
+// the largest level which contains data of the LSM store. For keys which
+// are hits, the filters in this level are not useful because we will search
+// for the data anyway. NOTE: the filters in other levels are still useful
+// even for key hit because they tell us whether to look in that level or go
+// to the higher level.
+//
+// Default: false
+func (opts *Options) SetOptimizeFiltersForHits(value bool) {
+	C.rocksdb_options_set_optimize_filters_for_hits(opts.c, C.int(btoi(value)))
 }
 
 // Destroy deallocates the Options object.

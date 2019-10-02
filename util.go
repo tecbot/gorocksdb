@@ -1,4 +1,5 @@
 package gorocksdb
+
 // #include <stdlib.h>
 
 import "C"

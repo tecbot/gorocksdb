@@ -39,6 +39,18 @@ func TestWriteBatch(t *testing.T) {
 	defer v2.Free()
 	ensure.Nil(t, err)
 	ensure.True(t, v2.Data() == nil)
+
+	// DeleteRange test
+	wb.Clear()
+	wb.DeleteRange(givenKey1, givenKey2)
+
+	// perform the batch
+	ensure.Nil(t, db.Write(wo, wb))
+
+	v1, err = db.Get(ro, givenKey1)
+	defer v1.Free()
+	ensure.Nil(t, err)
+	ensure.True(t, v1.Data() == nil)
 }
 
 func TestWriteBatchIterator(t *testing.T) {
