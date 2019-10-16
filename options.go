@@ -1202,9 +1202,8 @@ func (opts *Options) Destroy() {
 	if opts.ccmp != nil {
 		C.rocksdb_comparator_destroy(opts.ccmp)
 	}
-	if opts.cst != nil {
-		C.rocksdb_slicetransform_destroy(opts.cst)
-	}
+	// don't destroy the opts.cst here, it has already been
+	// associated with a PrefixExtractor and this will segfault
 	if opts.ccf != nil {
 		C.rocksdb_compactionfilter_destroy(opts.ccf)
 	}
