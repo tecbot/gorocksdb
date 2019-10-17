@@ -1202,9 +1202,6 @@ func (opts *Options) Destroy() {
 	if opts.ccmp != nil {
 		C.rocksdb_comparator_destroy(opts.ccmp)
 	}
-	if opts.cst != nil {
-		C.rocksdb_slicetransform_destroy(opts.cst)
-	}
 	if opts.ccf != nil {
 		C.rocksdb_compactionfilter_destroy(opts.ccf)
 	}
