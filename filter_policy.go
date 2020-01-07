@@ -49,6 +49,12 @@ func NewBloomFilter(bitsPerKey int) FilterPolicy {
 	return NewNativeFilterPolicy(C.rocksdb_filterpolicy_create_bloom(C.int(bitsPerKey)))
 }
 
+// NewBloomFilterFull returns a new filter policy created with use_block_based_builder=false
+// (use full or partitioned filter).
+func NewBloomFilterFull(bitsPerKey int) FilterPolicy {
+	return NewNativeFilterPolicy(C.rocksdb_filterpolicy_create_bloom_full(C.int(bitsPerKey)))
+}
+
 // Hold references to filter policies.
 var filterPolicies = NewCOWList()
 
