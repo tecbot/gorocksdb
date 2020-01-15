@@ -123,3 +123,10 @@ func (transaction *Transaction) Destroy() {
 	C.rocksdb_transaction_destroy(transaction.c)
 	transaction.c = nil
 }
+
+// GetSnapshot gets the transaction's snapshot.
+// A snapshot is created when SetSetSnapshot(true) is invoked on the corresponding TransactionOptions object.
+func (transaction *Transaction) GetSnapshot() *Snapshot {
+	cSnap := C.rocksdb_transaction_get_snapshot(transaction.c)
+	return NewNativeSnapshot(cSnap)
+}
