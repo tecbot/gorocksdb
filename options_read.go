@@ -109,6 +109,21 @@ func (opts *ReadOptions) SetIterateUpperBound(key []byte) {
 	C.rocksdb_readoptions_set_iterate_upper_bound(opts.c, cKey, cKeyLen)
 }
 
+// SetIterateLowerBound defines the smallest key at which the backward
+// iterator can return an entry. Once the bound is passed, Valid() will be
+// false. `iterate_lower_bound` is inclusive ie the bound value is a valid
+// entry.
+//
+// If prefix_extractor is not null, the Seek target and `iterate_lower_bound`
+// need to have the same prefix. This is because ordering is not guaranteed
+// outside of prefix domain.
+// Default: nullptr
+func (opts *ReadOptions) SetIterateLowerBound(key []byte) {
+	cKey := byteToChar(key)
+	cKeyLen := C.size_t(len(key))
+	C.rocksdb_readoptions_set_iterate_lower_bound(opts.c, cKey, cKeyLen)
+}
+
 // SetPinData specifies the value of "pin_data". If true, it keeps the blocks
 // loaded by the iterator pinned in memory as long as the iterator is not deleted,
 // If used when reading from tables created with
