@@ -1,4 +1,4 @@
-module github.com/tecbot/gorocksdb
+module github.com/edgelesssys/gorocksdb
 
 go 1.13
 
