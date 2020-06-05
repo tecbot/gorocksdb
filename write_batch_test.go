@@ -31,13 +31,13 @@ func TestWriteBatch(t *testing.T) {
 	// check changes
 	ro := NewDefaultReadOptions()
 	v1, err := db.Get(ro, givenKey1)
-	defer v1.Free()
 	ensure.Nil(t, err)
+	defer v1.Free()
 	ensure.DeepEqual(t, v1.Data(), givenVal1)
 
 	v2, err := db.Get(ro, givenKey2)
-	defer v2.Free()
 	ensure.Nil(t, err)
+	defer v2.Free()
 	ensure.True(t, v2.Data() == nil)
 
 	// DeleteRange test
@@ -48,8 +48,8 @@ func TestWriteBatch(t *testing.T) {
 	ensure.Nil(t, db.Write(wo, wb))
 
 	v1, err = db.Get(ro, givenKey1)
-	defer v1.Free()
 	ensure.Nil(t, err)
+	defer v1.Free()
 	ensure.True(t, v1.Data() == nil)
 }
 

@@ -30,33 +30,34 @@ func TestDBCRUD(t *testing.T) {
 
 	// retrieve
 	v1, err := db.Get(ro, givenKey)
-	defer v1.Free()
 	ensure.Nil(t, err)
+	defer v1.Free()
 	ensure.DeepEqual(t, v1.Data(), givenVal1)
 
 	// update
 	ensure.Nil(t, db.Put(wo, givenKey, givenVal2))
 	v2, err := db.Get(ro, givenKey)
-	defer v2.Free()
 	ensure.Nil(t, err)
+	defer v2.Free()
 	ensure.DeepEqual(t, v2.Data(), givenVal2)
 
 	// retrieve pinned
 	v3, err := db.GetPinned(ro, givenKey)
-	defer v3.Destroy()
 	ensure.Nil(t, err)
+	defer v3.Destroy()
 	ensure.DeepEqual(t, v3.Data(), givenVal2)
 
 	// delete
 	ensure.Nil(t, db.Delete(wo, givenKey))
 	v4, err := db.Get(ro, givenKey)
 	ensure.Nil(t, err)
+	defer v4.Free()
 	ensure.True(t, v4.Data() == nil)
 
 	// retrieve missing pinned
 	v5, err := db.GetPinned(ro, givenKey)
-	defer v5.Destroy()
 	ensure.Nil(t, err)
+	defer v5.Destroy()
 	ensure.True(t, v5.Data() == nil)
 }
 
@@ -83,8 +84,8 @@ func TestDBCRUDDBPaths(t *testing.T) {
 
 	// retrieve before create
 	noexist, err := db.Get(ro, givenKey)
-	defer noexist.Free()
 	ensure.Nil(t, err)
+	defer noexist.Free()
 	ensure.False(t, noexist.Exists())
 	ensure.DeepEqual(t, noexist.Data(), []byte(nil))
 
@@ -93,32 +94,32 @@ func TestDBCRUDDBPaths(t *testing.T) {
 
 	// retrieve
 	v1, err := db.Get(ro, givenKey)
-	defer v1.Free()
 	ensure.Nil(t, err)
+	defer v1.Free()
 	ensure.True(t, v1.Exists())
 	ensure.DeepEqual(t, v1.Data(), givenVal1)
 
 	// update
 	ensure.Nil(t, db.Put(wo, givenKey, givenVal2))
 	v2, err := db.Get(ro, givenKey)
-	defer v2.Free()
 	ensure.Nil(t, err)
+	defer v2.Free()
 	ensure.True(t, v2.Exists())
 	ensure.DeepEqual(t, v2.Data(), givenVal2)
 
 	// update
 	ensure.Nil(t, db.Put(wo, givenKey, givenVal3))
 	v3, err := db.Get(ro, givenKey)
-	defer v3.Free()
 	ensure.Nil(t, err)
+	defer v3.Free()
 	ensure.True(t, v3.Exists())
 	ensure.DeepEqual(t, v3.Data(), givenVal3)
 
 	// delete
 	ensure.Nil(t, db.Delete(wo, givenKey))
 	v4, err := db.Get(ro, givenKey)
-	defer v4.Free()
 	ensure.Nil(t, err)
+	defer v4.Free()
 	ensure.False(t, v4.Exists())
 	ensure.DeepEqual(t, v4.Data(), []byte(nil))
 }

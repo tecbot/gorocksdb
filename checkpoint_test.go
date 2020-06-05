@@ -41,16 +41,16 @@ func TestCheckpoint(t *testing.T) {
 	opts := NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
 	dbCheck, err = OpenDb(opts, dir)
-	defer dbCheck.Close()
 	ensure.Nil(t, err)
+	defer dbCheck.Close()
 
 	// test keys
 	var value *Slice
 	ro := NewDefaultReadOptions()
 	for _, k := range givenKeys {
 		value, err = dbCheck.Get(ro, k)
-		defer value.Free()
 		ensure.Nil(t, err)
+		defer value.Free()
 		ensure.DeepEqual(t, value.Data(), givenVal)
 	}
 

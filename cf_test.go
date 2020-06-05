@@ -82,8 +82,8 @@ func TestColumnFamilyBatchPutGet(t *testing.T) {
 	b0.PutCF(cfh[0], givenKey0, givenVal0)
 	ensure.Nil(t, db.Write(wo, b0))
 	actualVal0, err := db.GetCF(ro, cfh[0], givenKey0)
-	defer actualVal0.Free()
 	ensure.Nil(t, err)
+	defer actualVal0.Free()
 	ensure.DeepEqual(t, actualVal0.Data(), givenVal0)
 
 	b1 := NewWriteBatch()
@@ -91,15 +91,17 @@ func TestColumnFamilyBatchPutGet(t *testing.T) {
 	b1.PutCF(cfh[1], givenKey1, givenVal1)
 	ensure.Nil(t, db.Write(wo, b1))
 	actualVal1, err := db.GetCF(ro, cfh[1], givenKey1)
-	defer actualVal1.Free()
 	ensure.Nil(t, err)
+	defer actualVal1.Free()
 	ensure.DeepEqual(t, actualVal1.Data(), givenVal1)
 
 	actualVal, err := db.GetCF(ro, cfh[0], givenKey1)
 	ensure.Nil(t, err)
+	defer actualVal.Free()
 	ensure.DeepEqual(t, actualVal.Size(), 0)
 	actualVal, err = db.GetCF(ro, cfh[1], givenKey0)
 	ensure.Nil(t, err)
+	defer actualVal.Free()
 	ensure.DeepEqual(t, actualVal.Size(), 0)
 }
 
@@ -130,26 +132,29 @@ func TestColumnFamilyPutGetDelete(t *testing.T) {
 
 	ensure.Nil(t, db.PutCF(wo, cfh[0], givenKey0, givenVal0))
 	actualVal0, err := db.GetCF(ro, cfh[0], givenKey0)
-	defer actualVal0.Free()
 	ensure.Nil(t, err)
+	defer actualVal0.Free()
 	ensure.DeepEqual(t, actualVal0.Data(), givenVal0)
 
 	ensure.Nil(t, db.PutCF(wo, cfh[1], givenKey1, givenVal1))
 	actualVal1, err := db.GetCF(ro, cfh[1], givenKey1)
-	defer actualVal1.Free()
 	ensure.Nil(t, err)
+	defer actualVal1.Free()
 	ensure.DeepEqual(t, actualVal1.Data(), givenVal1)
 
 	actualVal, err := db.GetCF(ro, cfh[0], givenKey1)
 	ensure.Nil(t, err)
+	defer actualVal.Free()
 	ensure.DeepEqual(t, actualVal.Size(), 0)
 	actualVal, err = db.GetCF(ro, cfh[1], givenKey0)
 	ensure.Nil(t, err)
+	defer actualVal.Free()
 	ensure.DeepEqual(t, actualVal.Size(), 0)
 
 	ensure.Nil(t, db.DeleteCF(wo, cfh[0], givenKey0))
 	actualVal, err = db.GetCF(ro, cfh[0], givenKey0)
 	ensure.Nil(t, err)
+	defer actualVal.Free()
 	ensure.DeepEqual(t, actualVal.Size(), 0)
 }
 
@@ -194,8 +199,8 @@ func TestColumnFamilyMultiGet(t *testing.T) {
 
 	// column family 0 only has givenKey1
 	values, err := db.MultiGetCF(ro, cfh[0], []byte("noexist"), givenKey1, givenKey2, givenKey3)
-	defer values.Destroy()
 	ensure.Nil(t, err)
+	defer values.Destroy()
 	ensure.DeepEqual(t, len(values), 4)
 
 	ensure.DeepEqual(t, values[0].Data(), []byte(nil))
@@ -205,8 +210,8 @@ func TestColumnFamilyMultiGet(t *testing.T) {
 
 	// column family 1 only has givenKey2 and givenKey3
 	values, err = db.MultiGetCF(ro, cfh[1], []byte("noexist"), givenKey1, givenKey2, givenKey3)
-	defer values.Destroy()
 	ensure.Nil(t, err)
+	defer values.Destroy()
 	ensure.DeepEqual(t, len(values), 4)
 
 	ensure.DeepEqual(t, values[0].Data(), []byte(nil))
@@ -219,8 +224,8 @@ func TestColumnFamilyMultiGet(t *testing.T) {
 		ColumnFamilyHandles{cfh[0], cfh[1], cfh[1]},
 		[][]byte{givenKey1, givenKey2, givenKey3},
 	)
-	defer values.Destroy()
 	ensure.Nil(t, err)
+	defer values.Destroy()
 	ensure.DeepEqual(t, len(values), 3)
 
 	ensure.DeepEqual(t, values[0].Data(), givenVal1)

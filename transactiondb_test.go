@@ -33,22 +33,22 @@ func TestTransactionDBCRUD(t *testing.T) {
 
 	// retrieve
 	v1, err := db.Get(ro, givenKey)
-	defer v1.Free()
 	ensure.Nil(t, err)
+	defer v1.Free()
 	ensure.DeepEqual(t, v1.Data(), givenVal1)
 
 	// update
 	ensure.Nil(t, db.Put(wo, givenKey, givenVal2))
 	v2, err := db.Get(ro, givenKey)
-	defer v2.Free()
 	ensure.Nil(t, err)
+	defer v2.Free()
 	ensure.DeepEqual(t, v2.Data(), givenVal2)
 
 	// delete
 	ensure.Nil(t, db.Delete(wo, givenKey))
 	v3, err := db.Get(ro, givenKey)
-	defer v3.Free()
 	ensure.Nil(t, err)
+	defer v3.Free()
 	ensure.True(t, v3.Data() == nil)
 
 	// transaction
@@ -57,14 +57,14 @@ func TestTransactionDBCRUD(t *testing.T) {
 	// create
 	ensure.Nil(t, txn.Put(givenTxnKey, givenTxnVal1))
 	v4, err := txn.Get(ro, givenTxnKey)
-	defer v4.Free()
 	ensure.Nil(t, err)
+	defer v4.Free()
 	ensure.DeepEqual(t, v4.Data(), givenTxnVal1)
 
 	ensure.Nil(t, txn.Commit())
 	v5, err := db.Get(ro, givenTxnKey)
-	defer v5.Free()
 	ensure.Nil(t, err)
+	defer v5.Free()
 	ensure.DeepEqual(t, v5.Data(), givenTxnVal1)
 
 	// transaction
@@ -76,8 +76,8 @@ func TestTransactionDBCRUD(t *testing.T) {
 	ensure.Nil(t, txn2.Rollback())
 
 	v6, err := txn2.Get(ro, givenTxnKey2)
-	defer v6.Free()
 	ensure.Nil(t, err)
+	defer v6.Free()
 	ensure.True(t, v6.Data() == nil)
 	// transaction
 	txn3 := db.TransactionBegin(wo, to, nil)
@@ -87,8 +87,8 @@ func TestTransactionDBCRUD(t *testing.T) {
 	ensure.Nil(t, txn3.Commit())
 
 	v7, err := db.Get(ro, givenTxnKey)
-	defer v7.Free()
 	ensure.Nil(t, err)
+	defer v7.Free()
 	ensure.True(t, v7.Data() == nil)
 
 }
@@ -113,8 +113,8 @@ func TestTransactionDBGetForUpdate(t *testing.T) {
 	defer txn.Destroy()
 
 	v, err := txn.GetForUpdate(ro, givenKey)
-	defer v.Free()
 	ensure.Nil(t, err)
+	defer v.Free()
 
 	// expect lock timeout error to be thrown
 	if err := db.Put(wo, givenKey, givenVal); err == nil {

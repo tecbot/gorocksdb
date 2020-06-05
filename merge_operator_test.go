@@ -35,8 +35,8 @@ func TestMergeOperator(t *testing.T) {
 
 	ro := NewDefaultReadOptions()
 	v1, err := db.Get(ro, givenKey)
-	defer v1.Free()
 	ensure.Nil(t, err)
+	defer v1.Free()
 	ensure.DeepEqual(t, v1.Data(), givenMerged)
 }
 
@@ -88,10 +88,9 @@ func TestPartialMergeOperator(t *testing.T) {
 
 	ro := NewDefaultReadOptions()
 	v1, err := db.Get(ro, givenKey)
-	defer v1.Free()
 	ensure.Nil(t, err)
+	defer v1.Free()
 	ensure.DeepEqual(t, v1.Data(), fMergeResult)
-
 }
 
 func TestMergeMultiOperator(t *testing.T) {
@@ -142,10 +141,9 @@ func TestMergeMultiOperator(t *testing.T) {
 
 	ro := NewDefaultReadOptions()
 	v1, err := db.Get(ro, givenKey)
-	defer v1.Free()
 	ensure.Nil(t, err)
+	defer v1.Free()
 	ensure.DeepEqual(t, v1.Data(), fMergeResult)
-
 }
 
 // Mock Objects
