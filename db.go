@@ -752,6 +752,17 @@ func (db *DB) Flush(opts *FlushOptions) error {
 	return nil
 }
 
+// FlushCF triggers a manual flush for the column family.
+func (db *DB) FlushCF(cf *ColumnFamilyHandle, opts *FlushOptions) error {
+	var cErr *C.char
+	C.rocksdb_flush_cf(db.c, opts.c, cf.c, &cErr)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+} 
+
 // DisableFileDeletions disables file deletions and should be used when backup the database.
 func (db *DB) DisableFileDeletions() error {
 	var cErr *C.char
