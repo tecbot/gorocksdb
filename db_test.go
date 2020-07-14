@@ -243,3 +243,29 @@ func TestDBGetApproximateSizesCF(t *testing.T) {
 	sizes = db.GetApproximateSizesCF(cf, []Range{{Start: []byte{0x00}, Limit: []byte{0xFF}}})
 	ensure.DeepEqual(t, sizes, []uint64{0})
 }
+
+func TestDBFlushCF(t *testing.T) {
+	var (
+		db = newTestDB(t, "TestDBFlushCF", nil)
+		o  = NewDefaultOptions()
+		wo = NewDefaultWriteOptions()
+		fo = NewDefaultFlushOptions()
+
+		key1 = []byte("hello1")
+		val1 = []byte("world1")
+	)
+	defer func() {
+		fo.Destroy()
+		wo.Destroy()
+		db.Close()
+	}()
+
+	cf, err := db.CreateColumnFamily(o, "other")
+	ensure.Nil(t, err)
+
+	// update
+	ensure.Nil(t, db.PutCF(wo, cf, key1, val1))
+
+	// flush CF
+	ensure.Nil(t, db.FlushCF(cf, fo))
+}
