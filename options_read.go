@@ -141,6 +141,15 @@ func (opts *ReadOptions) SetTotalOrderSeek(value bool) {
 	C.rocksdb_readoptions_set_total_order_seek(opts.c, boolToChar(value))
 }
 
+// SetIgnoreRangeDeletions specifies the value of "ignore_range_deletions".
+// If true, keys deleted using the DeleteRange() API will be visible to
+// readers until they are naturally deleted during compaction. This improves
+// read performance in DBs with many range deletions.
+// Default: false
+func (opts *ReadOptions) SetIgnoreRangeDeletions(value bool) {
+	C.rocksdb_readoptions_set_ignore_range_deletions(opts.c, boolToChar(value))
+}
+
 // Destroy deallocates the ReadOptions object.
 func (opts *ReadOptions) Destroy() {
 	C.rocksdb_readoptions_destroy(opts.c)
