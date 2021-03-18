@@ -18,9 +18,14 @@ type Range struct {
 
 // DB is a reusable handle to a RocksDB database on disk, created by Open.
 type DB struct {
-	c    *C.rocksdb_t
-	name string
-	opts *Options
+	c      *C.rocksdb_t
+	closer func(*C.rocksdb_t)
+	name   string
+	opts   *Options
+}
+
+func dbClose(c *C.rocksdb_t) {
+	C.rocksdb_close(c)
 }
 
 // OpenDb opens a database with the specified options.
@@ -36,9 +41,10 @@ func OpenDb(opts *Options, name string) (*DB, error) {
 		return nil, errors.New(C.GoString(cErr))
 	}
 	return &DB{
-		name: name,
-		c:    db,
-		opts: opts,
+		c:      db,
+		closer: dbClose,
+		name:   name,
+		opts:   opts,
 	}, nil
 }
 
@@ -55,9 +61,10 @@ func OpenDbWithTTL(opts *Options, name string, ttl int) (*DB, error) {
 		return nil, errors.New(C.GoString(cErr))
 	}
 	return &DB{
-		name: name,
-		c:    db,
-		opts: opts,
+		c:      db,
+		closer: dbClose,
+		name:   name,
+		opts:   opts,
 	}, nil
 }
 
@@ -74,9 +81,10 @@ func OpenDbForReadOnly(opts *Options, name string, errorIfLogFileExist bool) (*D
 		return nil, errors.New(C.GoString(cErr))
 	}
 	return &DB{
-		name: name,
-		c:    db,
-		opts: opts,
+		c:      db,
+		closer: dbClose,
+		name:   name,
+		opts:   opts,
 	}, nil
 }
 
@@ -133,9 +141,10 @@ func OpenDbColumnFamilies(
 	}
 
 	return &DB{
-		name: name,
-		c:    db,
-		opts: opts,
+		c:      db,
+		closer: dbClose,
+		name:   name,
+		opts:   opts,
 	}, cfHandles, nil
 }
 
@@ -195,9 +204,10 @@ func OpenDbForReadOnlyColumnFamilies(
 	}
 
 	return &DB{
-		name: name,
-		c:    db,
-		opts: opts,
+		c:      db,
+		closer: dbClose,
+		name:   name,
+		opts:   opts,
 	}, cfHandles, nil
 }
 
@@ -918,7 +928,7 @@ func (db *DB) NewCheckpoint() (*Checkpoint, error) {
 
 // Close closes the database.
 func (db *DB) Close() {
-	C.rocksdb_close(db.c)
+	db.closer(db.c)
 }
 
 // DestroyDb removes a database entirely, removing everything from the
