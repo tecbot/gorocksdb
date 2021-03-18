@@ -141,3 +141,68 @@ func (transactionDB *TransactionDB) Close() {
 	C.rocksdb_transactiondb_close(transactionDB.c)
 	transactionDB.c = nil
 }
+
+// OptimisticTransactionDB is a reusable handle to a RocksDB optimistic transactional database on disk, created by OpenOptimisticTransactionDb.
+type OptimisticTransactionDB struct {
+	c    *C.rocksdb_optimistictransactiondb_t
+	name string
+	opts *Options
+}
+
+// OpenTransactionDb opens a database with the specified options.
+func OpenOptimisticTransactionDb(
+	opts *Options,
+	name string,
+) (*OptimisticTransactionDB, error) {
+	var (
+		cErr  *C.char
+		cName = C.CString(name)
+	)
+	defer C.free(unsafe.Pointer(cName))
+	db := C.rocksdb_optimistictransactiondb_open(opts.c, cName, &cErr)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return &OptimisticTransactionDB{
+		name: name,
+		c:    db,
+		opts: opts,
+	}, nil
+}
+
+// GetBaseDB returns the base database.
+func (db *OptimisticTransactionDB) GetBaseDB() *DB {
+	return &DB{
+		c:      C.rocksdb_optimistictransactiondb_get_base_db(db.c),
+		closer: func(c *C.rocksdb_t) { C.rocksdb_optimistictransactiondb_close_base_db(c) },
+		name:   db.name,
+		opts:   db.opts,
+	}
+}
+
+// TransactionBegin begins a new transaction
+// with the WriteOptions and TransactionOptions given.
+func (db *OptimisticTransactionDB) TransactionBegin(
+	opts *WriteOptions,
+	transactionOpts *OptimisticTransactionOptions,
+	oldTransaction *Transaction,
+) *Transaction {
+	if oldTransaction != nil {
+		return NewNativeTransaction(C.rocksdb_optimistictransaction_begin(
+			db.c,
+			opts.c,
+			transactionOpts.c,
+			oldTransaction.c,
+		))
+	}
+
+	return NewNativeTransaction(C.rocksdb_optimistictransaction_begin(
+		db.c, opts.c, transactionOpts.c, nil))
+}
+
+// Close closes the database.
+func (transactionDB *OptimisticTransactionDB) Close() {
+	C.rocksdb_optimistictransactiondb_close(transactionDB.c)
+	transactionDB.c = nil
+}

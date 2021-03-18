@@ -64,3 +64,31 @@ func (opts *TransactionOptions) Destroy() {
 	C.rocksdb_transaction_options_destroy(opts.c)
 	opts.c = nil
 }
+
+// OptimisticTransactionOptions represent all of the available options for
+// a optimistic transaction on the database.
+type OptimisticTransactionOptions struct {
+	c *C.rocksdb_optimistictransaction_options_t
+}
+
+// NewDefaultOptimisticTransactionOptions creates a default OptimisticTransactionOptions object.
+func NewDefaultOptimisticTransactionOptions() *OptimisticTransactionOptions {
+	return NewNativeOptimisticTransactionOptions(C.rocksdb_optimistictransaction_options_create())
+}
+
+// NewNativeOptimisticTransactionOptions creates a OptimisticTransactionOptions object.
+func NewNativeOptimisticTransactionOptions(c *C.rocksdb_optimistictransaction_options_t) *OptimisticTransactionOptions {
+	return &OptimisticTransactionOptions{c}
+}
+
+// Destroy deallocates the OptimisticTransactionOptions object.
+func (opts *OptimisticTransactionOptions) Destroy() {
+	C.rocksdb_optimistictransaction_options_destroy(opts.c)
+	opts.c = nil
+}
+
+// SetSetSnapshot to true is the same as calling
+// Transaction::SetSnapshot().
+func (opts *OptimisticTransactionOptions) SetSetSnapshot(value bool) {
+	C.rocksdb_optimistictransaction_options_set_set_snapshot(opts.c, boolToChar(value))
+}
