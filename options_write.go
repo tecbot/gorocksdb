@@ -35,6 +35,47 @@ func (opts *WriteOptions) DisableWAL(value bool) {
 	C.rocksdb_writeoptions_disable_WAL(opts.c, C.int(btoi(value)))
 }
 
+// SetIgnoreMissingColumnFamilies specifies the value of "ignore_missing_column_families".
+// If true and if user is trying to write to column families that don't exist
+// (they were dropped),  ignore the write (don't return an error). If there
+// are multiple writes in a WriteBatch, other writes will succeed.
+// Default: false
+func (opts *WriteOptions) SetIgnoreMissingColumnFamilies(value bool) {
+	C.rocksdb_writeoptions_set_ignore_missing_column_families(opts.c, boolToChar(value))
+}
+
+// SetNoSlowdown specifies the value of "no_slowdown".
+// If true and we need to wait or sleep for the write request, fails
+// immediately with Status::Incomplete().
+// Default: false
+func (opts *WriteOptions) SetNoSlowdown(value bool) {
+	C.rocksdb_writeoptions_set_no_slowdown(opts.c, boolToChar(value))
+}
+
+// SetLowPri specifies the value of "low_pri".
+// If true, this write request is of lower priority if compaction is
+// behind. In this case, no_slowdown = true, the request will be cancelled
+// immediately with Status::Incomplete() returned. Otherwise, it will be
+// slowed down. The slowdown value is determined by RocksDB to guarantee
+// it introduces minimum impacts to high priority writes.
+//
+// Default: false
+func (opts *WriteOptions) SetLowPri(value bool) {
+	C.rocksdb_writeoptions_set_low_pri(opts.c, boolToChar(value))
+}
+
+// SetMemtableInsertHintPerBatch specifies the value of "memtable_insert_hint_per_batch".
+// If true, this writebatch will maintain the last insert positions of each
+// memtable as hints in concurrent write. It can improve write performance
+// in concurrent writes if keys in one writebatch are sequential. In
+// non-concurrent writes (when concurrent_memtable_writes is false) this
+// option will be ignored.
+//
+// Default: false
+func (opts *WriteOptions) SetMemtableInsertHintPerBatch(value bool) {
+	C.rocksdb_writeoptions_set_memtable_insert_hint_per_batch(opts.c, boolToChar(value))
+}
+
 // Destroy deallocates the WriteOptions object.
 func (opts *WriteOptions) Destroy() {
 	C.rocksdb_writeoptions_destroy(opts.c)

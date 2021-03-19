@@ -18,6 +18,14 @@ const (
 	KTwoLevelIndexSearchIndexType = 2
 )
 
+// DataBlockIndexType specifies the index type that will be used for the data block.
+type DataBlockIndexType byte
+
+const (
+	kDataBlockBinarySearch  = 0 // traditional block type
+	kDataBlockBinaryAndHash = 1 // additional hash index
+)
+
 // BlockBasedTableOptions represents block-based table options.
 type BlockBasedTableOptions struct {
 	c *C.rocksdb_block_based_table_options_t
@@ -234,4 +242,16 @@ func (opts *BlockBasedTableOptions) SetFormatVersion(version int) {
 // Default: kBinarySearch
 func (opts *BlockBasedTableOptions) SetIndexType(value IndexType) {
 	C.rocksdb_block_based_options_set_index_type(opts.c, C.int(value))
+}
+
+// SetDataBlockIndexType sets the index type that will be used for the data block.
+func (opts *BlockBasedTableOptions) SetDataBlockIndexType(value DataBlockIndexType) {
+	C.rocksdb_block_based_options_set_data_block_index_type(opts.c, C.int(value))
+}
+
+// SetDataBlockIndexType sets the hash radio that will be used for the data block.
+// #entries/#buckets. It is valid only when data_block_hash_index_type is
+// kDataBlockBinaryAndHash.
+func (opts *BlockBasedTableOptions) SetDataBlockHashRadio(value float64) {
+	C.rocksdb_block_based_options_set_data_block_hash_ratio(opts.c, C.double(value))
 }

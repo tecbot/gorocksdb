@@ -307,6 +307,18 @@ func (opts *Options) SetAllowConcurrentMemtableWrites(allow bool) {
 	C.rocksdb_options_set_allow_concurrent_memtable_write(opts.c, boolToChar(allow))
 }
 
+// SetEnableWriteThreadAdaptiveYield sets enable_write_thread_adaptive_yield.
+//
+// If true, threads synchronizing with the write batch group leader will
+// wait for up to write_thread_max_yield_usec before blocking on a mutex.
+// This can substantially improve throughput for concurrent workloads,
+// regardless of whether allow_concurrent_memtable_write is enabled.
+//
+// Default: true
+func (opts *Options) SetEnableWriteThreadAdaptiveYield(allow bool) {
+	C.rocksdb_options_set_enable_write_thread_adaptive_yield(opts.c, boolToChar(allow))
+}
+
 // OptimizeLevelStyleCompaction optimize the DB for leveld compaction.
 //
 // Default values for some parameters in ColumnFamilyOptions are not
@@ -370,6 +382,41 @@ func (opts *Options) SetMinWriteBufferNumberToMerge(value int) {
 	C.rocksdb_options_set_min_write_buffer_number_to_merge(opts.c, C.int(value))
 }
 
+// SetMaxWriteBufferSizeToMaintain sets max_write_buffer_size_to_maintain
+// The total maximum size(bytes) of write buffers to maintain in memory
+// including copies of buffers that have already been flushed. This parameter
+// only affects trimming of flushed buffers and does not affect flushing.
+// This controls the maximum amount of write history that will be available
+// in memory for conflict checking when Transactions are used. The actual
+// size of write history (flushed Memtables) might be higher than this limit
+// if further trimming will reduce write history total size below this
+// limit. For example, if max_write_buffer_size_to_maintain is set to 64MB,
+// and there are three flushed Memtables, with sizes of 32MB, 20MB, 20MB.
+// Because trimming the next Memtable of size 20MB will reduce total memory
+// usage to 52MB which is below the limit, RocksDB will stop trimming.
+//
+// When using an OptimisticTransactionDB:
+// If this value is too low, some transactions may fail at commit time due
+// to not being able to determine whether there were any write conflicts.
+//
+// When using a TransactionDB:
+// If Transaction::SetSnapshot is used, TransactionDB will read either
+// in-memory write buffers or SST files to do write-conflict checking.
+// Increasing this value can reduce the number of reads to SST files
+// done for conflict detection.
+//
+// Setting this value to 0 will cause write buffers to be freed immediately
+// after they are flushed. If this value is set to -1,
+// 'max_write_buffer_number * write_buffer_size' will be used.
+//
+// Default:
+// If using a TransactionDB/OptimisticTransactionDB, the default value will
+// be set to the value of 'max_write_buffer_number * write_buffer_size'
+// if it is not explicitly set by the user.  Otherwise, the default is 0.
+func (opts *Options) SetMaxWriteBufferSizeToMaintain(value int64) {
+	C.rocksdb_options_set_max_write_buffer_size_to_maintain(opts.c, C.int64_t(value))
+}
+
 // SetMaxOpenFiles sets the number of open files that can be used by the DB.
 //
 // You may need to increase this if your database has a large working set
@@ -405,6 +452,15 @@ func (opts *Options) SetCompression(value CompressionType) {
 	C.rocksdb_options_set_compression(opts.c, C.int(value))
 }
 
+// SetBottommostCompression sets the compression algorithm
+// that will be used for the bottommost level that contain files.
+//
+// Default: SnappyCompression, which gives lightweight but fast
+// compression.
+func (opts *Options) SetBottommostCompression(value CompressionType) {
+	C.rocksdb_options_set_bottommost_compression(opts.c, C.int(value))
+}
+
 // SetCompressionPerLevel sets different compression algorithm per level.
 //
 // Different levels can have different compression policies. There
@@ -432,6 +488,20 @@ func (opts *Options) SetMinLevelToCompress(value int) {
 // Default: nil
 func (opts *Options) SetCompressionOptions(value *CompressionOptions) {
 	C.rocksdb_options_set_compression_options(opts.c, C.int(value.WindowBits), C.int(value.Level), C.int(value.Strategy), C.int(value.MaxDictBytes))
+	if value.ZstdMaxTrainBytes > 0 {
+		C.rocksdb_options_set_compression_options_zstd_max_train_bytes(opts.c, C.int(value.ZstdMaxTrainBytes))
+	}
+}
+
+// SetBottommostCompressionOptions sets different options for compression algorithms used by bottommost_compression
+// if it is enabled. To enable it, please see the definition of
+// CompressionOptions.
+// Default: nil
+func (opts *Options) SetBottommostCompressionOptions(value *CompressionOptions, enabled bool) {
+	C.rocksdb_options_set_bottommost_compression_options(opts.c, C.int(value.WindowBits), C.int(value.Level), C.int(value.Strategy), C.int(value.MaxDictBytes), boolToChar(enabled))
+	if value.ZstdMaxTrainBytes > 0 {
+		C.rocksdb_options_set_bottommost_compression_options_zstd_max_train_bytes(opts.c, C.int(value.ZstdMaxTrainBytes), boolToChar(enabled))
+	}
 }
 
 // SetPrefixExtractor sets the prefic extractor.
@@ -739,6 +809,19 @@ func (opts *Options) SetKeepLogFileNum(value int) {
 	C.rocksdb_options_set_keep_log_file_num(opts.c, C.size_t(value))
 }
 
+// SetRecycleLogFileNum sets the recycle log files.
+//
+// If non-zero, we will reuse previously written log files for new
+// logs, overwriting the old data.  The value indicates how many
+// such files we will keep around at any point in time for later
+// use.  This is more efficient because the blocks are already
+// allocated and fdatasync does not need to update the inode after
+// each write.
+// Default: 0
+func (opts *Options) SetRecycleLogFileNum(value int) {
+	C.rocksdb_options_set_recycle_log_file_num(opts.c, C.size_t(value))
+}
+
 // SetSoftRateLimit sets the soft rate limit.
 //
 // Puts are delayed 0-1 ms when any level has a compaction score that exceeds
@@ -853,6 +936,55 @@ func (opts *Options) SetEnablePipelinedWrite(value bool) {
 	C.rocksdb_options_set_enable_pipelined_write(opts.c, boolToChar(value))
 }
 
+// SetUnorderedWrite enables unordered write
+//
+// Setting unordered_write to true trades higher write throughput with
+// relaxing the immutability guarantee of snapshots. This violates the
+// repeatability one expects from ::Get from a snapshot, as well as
+// ::MultiGet and Iterator's consistent-point-in-time view property.
+// If the application cannot tolerate the relaxed guarantees, it can implement
+// its own mechanisms to work around that and yet benefit from the higher
+// throughput. Using TransactionDB with WRITE_PREPARED write policy and
+// two_write_queues=true is one way to achieve immutable snapshots despite
+// unordered_write.
+//
+// By default, i.e., when it is false, rocksdb does not advance the sequence
+// number for new snapshots unless all the writes with lower sequence numbers
+// are already finished. This provides the immutability that we except from
+// snapshots. Moreover, since Iterator and MultiGet internally depend on
+// snapshots, the snapshot immutability results into Iterator and MultiGet
+// offering consistent-point-in-time view. If set to true, although
+// Read-Your-Own-Write property is still provided, the snapshot immutability
+// property is relaxed: the writes issued after the snapshot is obtained (with
+// larger sequence numbers) will be still not visible to the reads from that
+// snapshot, however, there still might be pending writes (with lower sequence
+// number) that will change the state visible to the snapshot after they are
+// landed to the memtable.
+//
+// Default: false
+func (opts *Options) SetUnorderedWrite(value bool) {
+	C.rocksdb_options_set_unordered_write(opts.c, boolToChar(value))
+}
+
+// SetMaxSubcompactions sets the maximum number of threads that will
+// concurrently perform a compaction job by breaking it into multiple,
+// smaller ones that are run simultaneously.
+// Default: 1 (i.e. no subcompactions)
+//
+// Dynamically changeable through SetDBOptions() API.
+func (opts *Options) SetMaxSubcompactions(value uint) {
+	C.rocksdb_options_set_max_subcompactions(opts.c, C.uint32_t(value))
+}
+
+// SetMaxBackgroundJobs sets the maximum number of concurrent background jobs (compactions and flushes).
+//
+// Default: 2
+//
+// Dynamically changeable through SetDBOptions() API.
+func (opts *Options) SetMaxBackgroundJobs(value int) {
+	C.rocksdb_options_set_max_background_jobs(opts.c, C.int(value))
+}
+
 // SetManifestPreallocationSize sets the number of bytes
 // to preallocate (via fallocate) the manifest files.
 //
@@ -918,6 +1050,14 @@ func (opts *Options) SetStatsDumpPeriodSec(value uint) {
 	C.rocksdb_options_set_stats_dump_period_sec(opts.c, C.uint(value))
 }
 
+// SetStatsPersistPeriodSec sets the stats persist period in seconds.
+//
+// if not zero, dump rocksdb.stats to RocksDB every stats_persist_period_sec
+// Default: 600
+func (opts *Options) SetStatsPersistPeriodSec(value int) {
+	C.rocksdb_options_set_stats_persist_period_sec(opts.c, C.uint(value))
+}
+
 // SetAdviseRandomOnOpen specifies whether we will hint the underlying
 // file system that the file access pattern is random, when a sst file is opened.
 // Default: true
@@ -969,6 +1109,31 @@ func (opts *Options) SetBytesPerSync(value uint64) {
 	C.rocksdb_options_set_bytes_per_sync(opts.c, C.uint64_t(value))
 }
 
+// SetWalBytesPerSync sets the bytes per sync for WAL files.
+//
+// Same as bytes_per_sync, but applies to WAL files
+//
+// Default: 0, turned off
+//
+// Dynamically changeable through SetDBOptions() API.
+func (opts *Options) SetWalBytesPerSync(value uint64) {
+	C.rocksdb_options_set_wal_bytes_per_sync(opts.c, C.uint64_t(value))
+}
+
+// SetWritableFileMaxBufferSize sets the maximum buffer size that is used by WritableFileWriter.
+//
+// On Windows, we need to maintain an aligned buffer for writes.
+// We allow the buffer to grow until it's size hits the limit in buffered
+// IO and fix the buffer size when using direct IO to ensure alignment of
+// write requests if the logical sector size is unusual
+//
+// Default: 1024 * 1024 (1 MB)
+//
+// Dynamically changeable through SetDBOptions() API.
+func (opts *Options) SetWritableFileMaxBufferSize(value uint64) {
+	C.rocksdb_options_set_writable_file_max_buffer_size(opts.c, C.uint64_t(value))
+}
+
 // SetCompactionStyle sets the compaction style.
 // Default: LevelCompactionStyle
 func (opts *Options) SetCompactionStyle(value CompactionStyle) {
@@ -986,6 +1151,30 @@ func (opts *Options) SetUniversalCompactionOptions(value *UniversalCompactionOpt
 // Default: nil
 func (opts *Options) SetFIFOCompactionOptions(value *FIFOCompactionOptions) {
 	C.rocksdb_options_set_fifo_compaction_options(opts.c, value.c)
+}
+
+// SetAtomicFlush sets atomic_flush
+// If true, RocksDB supports flushing multiple column families and committing
+// their results atomically to MANIFEST. Note that it is not
+// necessary to set atomic_flush to true if WAL is always enabled since WAL
+// allows the database to be restored to the last persistent state in WAL.
+// This option is useful when there are column families with writes NOT
+// protected by WAL.
+// For manual flush, application has to specify which column families to
+// flush atomically in DB::Flush.
+// For auto-triggered flush, RocksDB atomically flushes ALL column families.
+//
+// Currently, any WAL-enabled writes after atomic flush may be replayed
+// independently if the process crashes later and tries to recover.
+func (opts *Options) SetAtomicFlush(value bool) {
+	C.rocksdb_options_set_atomic_flush(opts.c, boolToChar(value))
+}
+
+// SetRowCache sets a global cache for table-level rows.
+// Default: nullptr (disabled)
+// Not supported in ROCKSDB_LITE mode!
+func (opts *Options) SetRowCache(cache *Cache) {
+	C.rocksdb_options_set_row_cache(opts.c, cache.c)
 }
 
 // GetStatisticsString returns the statistics as a string.
@@ -1029,6 +1218,15 @@ func (opts *Options) SetInplaceUpdateSupport(value bool) {
 // Default: 10000, if inplace_update_support = true, else 0.
 func (opts *Options) SetInplaceUpdateNumLocks(value int) {
 	C.rocksdb_options_set_inplace_update_num_locks(opts.c, C.size_t(value))
+}
+
+// SetReportBgIoStats enable/disable to measure IO stats in compactions and flushes.
+//
+// Default: false
+//
+// Dynamically changeable through SetOptions() API
+func (opts *Options) SetReportBgIoStats(value bool) {
+	C.rocksdb_options_set_inplace_update_support(opts.c, boolToChar(value))
 }
 
 // SetMemtableHugePageSize sets the page size for huge page for
@@ -1094,6 +1292,20 @@ func (opts *Options) PrepareForBulkLoad() {
 // iteration is very rare and writes are generally not issued after reads begin.
 func (opts *Options) SetMemtableVectorRep() {
 	C.rocksdb_options_set_memtable_vector_rep(opts.c)
+}
+
+// SetMemtablePrefixBloomSizeRatio sets memtable_prefix_bloom_size_ratio.
+//
+// if prefix_extractor is set and memtable_prefix_bloom_size_ratio is not 0,
+// create prefix bloom for memtable with the size of
+// write_buffer_size * memtable_prefix_bloom_size_ratio.
+// If it is larger than 0.25, it is sanitized to 0.25.
+//
+// Default: 0 (disable)
+//
+// Dynamically changeable through SetOptions() API
+func (opts *Options) SetMemtablePrefixBloomSizeRatio(value float64) {
+	C.rocksdb_options_set_memtable_prefix_bloom_size_ratio(opts.c, C.double(value))
 }
 
 // SetHashSkipListRep sets a hash skip list as MemTableRep.
@@ -1194,6 +1406,30 @@ func (opts *Options) SetMemTablePrefixBloomSizeRatio(value float64) {
 // Default: false
 func (opts *Options) SetOptimizeFiltersForHits(value bool) {
 	C.rocksdb_options_set_optimize_filters_for_hits(opts.c, C.int(btoi(value)))
+}
+
+// SetSkipStatsUpdateOnDbOpen sets skip_stats_update_on_db_open
+// If true, then DB::Open() will not update the statistics used to optimize
+// compaction decision by loading table properties from many files.
+// Turning off this feature will improve DBOpen time especially in
+// disk environment.
+//
+// Default: false
+func (opts *Options) SetSkipStatsUpdateOnDbOpen(value bool) {
+	C.rocksdb_options_set_skip_stats_update_on_db_open(opts.c, boolToChar(value))
+}
+
+// SetSkipCheckingSstFileSizesOnDbOpen sets skip_checking_sst_file_sizes_on_db_open
+// If true, then DB::Open() will not fetch and check sizes of all sst files.
+// This may significantly speed up startup if there are many sst files,
+// especially when using non-default Env with expensive GetFileSize().
+// We'll still check that all required sst files exist.
+// If paranoid_checks is false, this option is ignored, and sst files are
+// not checked at all.
+//
+// Default: false
+func (opts *Options) SetSkipCheckingSstFileSizesOnDbOpen(value bool) {
+	C.rocksdb_options_set_skip_checking_sst_file_sizes_on_db_open(opts.c, boolToChar(value))
 }
 
 // Destroy deallocates the Options object.
