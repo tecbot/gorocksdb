@@ -161,6 +161,19 @@ func (b *BackupEngine) PurgeOldBackups(n uint32) error {
 	return nil
 }
 
+// VerifyBackup checks the file sizes in the backup directory
+// against the original sizes of the corresponding files in the db directory.
+// It does not check file checksum.
+func (b *BackupEngine) VerifyBackup(id int64) error {
+	var cErr *C.char
+	C.rocksdb_backup_engine_verify_backup(b.c, C.uint32_t(id), &cErr)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
 // Close close the backup engine and cleans up state
 // The backups already taken remain on storage.
 func (b *BackupEngine) Close() {
