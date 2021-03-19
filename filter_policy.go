@@ -19,6 +19,9 @@ type FilterPolicy interface {
 
 	// Return the name of this policy.
 	Name() string
+
+	// Destroy deallocates the policy filter.
+	Destroy()
 }
 
 // NewNativeFilterPolicy creates a FilterPolicy object.
@@ -33,6 +36,7 @@ type nativeFilterPolicy struct {
 func (fp nativeFilterPolicy) CreateFilter(keys [][]byte) []byte          { return nil }
 func (fp nativeFilterPolicy) KeyMayMatch(key []byte, filter []byte) bool { return false }
 func (fp nativeFilterPolicy) Name() string                               { return "" }
+func (fp nativeFilterPolicy) Destroy()                                   { C.rocksdb_filterpolicy_destroy(fp.c) }
 
 // NewBloomFilter returns a new filter policy that uses a bloom filter with approximately
 // the specified number of bits per key.  A good value for bits_per_key

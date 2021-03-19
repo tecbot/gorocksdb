@@ -74,3 +74,4 @@ func (m *mockFilterPolicy) CreateFilter(keys [][]byte) []byte {
 func (m *mockFilterPolicy) KeyMayMatch(key, filter []byte) bool {
 	return m.keyMayMatch(key, filter)
 }
+func (m *mockFilterPolicy) Destroy() {}
