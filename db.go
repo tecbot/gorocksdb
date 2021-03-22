@@ -582,10 +582,11 @@ func (db *DB) DropColumnFamily(c *ColumnFamilyHandle) error {
 //
 // The keys counted will begin at Range.Start and end on the key before
 // Range.Limit.
-func (db *DB) GetApproximateSizes(ranges []Range) []uint64 {
-	sizes := make([]uint64, len(ranges))
+func (db *DB) GetApproximateSizes(ranges []Range) (sizes []uint64, err error) {
+	var cErr *C.char
+	sizes = make([]uint64, len(ranges))
 	if len(ranges) == 0 {
-		return sizes
+		return
 	}
 
 	cStarts := make([]*C.char, len(ranges))
@@ -613,9 +614,15 @@ func (db *DB) GetApproximateSizes(ranges []Range) []uint64 {
 		&cStartLens[0],
 		&cLimits[0],
 		&cLimitLens[0],
-		(*C.uint64_t)(&sizes[0]))
+		(*C.uint64_t)(&sizes[0]),
+		&cErr,
+	)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		err = errors.New(C.GoString(cErr))
+	}
 
-	return sizes
+	return
 }
 
 // GetApproximateSizesCF returns the approximate number of bytes of file system
@@ -623,10 +630,11 @@ func (db *DB) GetApproximateSizes(ranges []Range) []uint64 {
 //
 // The keys counted will begin at Range.Start and end on the key before
 // Range.Limit.
-func (db *DB) GetApproximateSizesCF(cf *ColumnFamilyHandle, ranges []Range) []uint64 {
-	sizes := make([]uint64, len(ranges))
+func (db *DB) GetApproximateSizesCF(cf *ColumnFamilyHandle, ranges []Range) (sizes []uint64, err error) {
+	var cErr *C.char
+	sizes = make([]uint64, len(ranges))
 	if len(ranges) == 0 {
-		return sizes
+		return
 	}
 
 	cStarts := make([]*C.char, len(ranges))
@@ -655,9 +663,15 @@ func (db *DB) GetApproximateSizesCF(cf *ColumnFamilyHandle, ranges []Range) []ui
 		&cStartLens[0],
 		&cLimits[0],
 		&cLimitLens[0],
-		(*C.uint64_t)(&sizes[0]))
+		(*C.uint64_t)(&sizes[0]),
+		&cErr,
+	)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		err = errors.New(C.GoString(cErr))
+	}
 
-	return sizes
+	return
 }
 
 // SetOptions dynamically changes options through the SetOptions API.
