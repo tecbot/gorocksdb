@@ -43,7 +43,7 @@ func TestNewNoopPrefixTransform(t *testing.T) {
 }
 
 type testSliceTransform struct {
-	initiated bool
+	// initiated bool
 }
 
 func (st *testSliceTransform) Name() string                { return "gorocksdb.test" }
