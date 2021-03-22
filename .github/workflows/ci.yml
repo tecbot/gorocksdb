@@ -24,6 +24,7 @@ jobs:
       - name: Install MacOS dependencies
         if: startsWith(matrix.os, 'macos-')
         run: |
+          brew update
           brew install rocksdb
 
       - name: Install Golang ${{ matrix.go }}
