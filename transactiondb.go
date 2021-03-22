@@ -41,6 +41,25 @@ func OpenTransactionDb(
 	}, nil
 }
 
+func (db *TransactionDB) CreateColumnFamily(opts *Options, name string) (*ColumnFamilyHandle, error) {
+	var (
+		cErr  *C.char
+		cName = C.CString(name)
+	)
+	defer C.free(unsafe.Pointer(cName))
+
+	h := C.rocksdb_transactiondb_create_column_family(
+		db.c,
+		opts.c,
+		cName,
+		&cErr)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return NewNativeColumnFamilyHandle(h), nil
+}
+
 // NewSnapshot creates a new snapshot of the database.
 func (db *TransactionDB) NewSnapshot() *Snapshot {
 	return NewNativeSnapshot(C.rocksdb_transactiondb_create_snapshot(db.c))
@@ -89,6 +108,23 @@ func (db *TransactionDB) Get(opts *ReadOptions, key []byte) (*Slice, error) {
 	return NewSlice(cValue, cValLen), nil
 }
 
+// Get returns the data associated with the key from the database and column family.
+func (db *TransactionDB) GetCF(opts *ReadOptions, cf *ColumnFamilyHandle, key []byte) (*Slice, error) {
+	var (
+		cErr    *C.char
+		cValLen C.size_t
+		cKey    = byteToChar(key)
+	)
+	cValue := C.rocksdb_transactiondb_get_cf(
+		db.c, opts.c, cf.c, cKey, C.size_t(len(key)), &cValLen, &cErr,
+	)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return NewSlice(cValue, cValLen), nil
+}
+
 // Put writes data associated with a key to the database.
 func (db *TransactionDB) Put(opts *WriteOptions, key, value []byte) error {
 	var (
@@ -98,6 +134,23 @@ func (db *TransactionDB) Put(opts *WriteOptions, key, value []byte) error {
 	)
 	C.rocksdb_transactiondb_put(
 		db.c, opts.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)), &cErr,
+	)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
+// Put writes data associated with a key to the database and column family.
+func (db *TransactionDB) PutCF(opts *WriteOptions, cf *ColumnFamilyHandle, key, value []byte) error {
+	var (
+		cErr   *C.char
+		cKey   = byteToChar(key)
+		cValue = byteToChar(value)
+	)
+	C.rocksdb_transactiondb_put_cf(
+		db.c, opts.c, cf.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)), &cErr,
 	)
 	if cErr != nil {
 		defer C.rocksdb_free(unsafe.Pointer(cErr))
@@ -118,6 +171,27 @@ func (db *TransactionDB) Delete(opts *WriteOptions, key []byte) error {
 		return errors.New(C.GoString(cErr))
 	}
 	return nil
+}
+
+// Delete removes the data associated with the key from the database and column family.
+func (db *TransactionDB) DeleteCF(opts *WriteOptions, cf *ColumnFamilyHandle, key []byte) error {
+	var (
+		cErr *C.char
+		cKey = byteToChar(key)
+	)
+	C.rocksdb_transactiondb_delete_cf(db.c, opts.c, cf.c, cKey, C.size_t(len(key)), &cErr)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
+// NewIterator returns an Iterator over the database that uses the
+// ReadOptions given.
+func (db *TransactionDB) NewIterator(opts *ReadOptions) *Iterator {
+	return NewNativeIterator(
+		unsafe.Pointer(C.rocksdb_transactiondb_create_iterator(db.c, opts.c)))
 }
 
 // NewCheckpoint creates a new Checkpoint for this db.
