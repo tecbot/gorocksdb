@@ -65,4 +65,4 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.38
-          working-directory: $GITHUB_WORKSPACE
+          working-directory: ${{ env.GITHUB_WORKSPACE }}
