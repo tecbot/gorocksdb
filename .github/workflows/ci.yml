@@ -1,0 +1,68 @@
+name: Continuous integration
+
+on: [push, pull_request]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        go: [1.16.x, 1.15.x, 1.14.x, 1.13.x]
+    name: Go ${{ matrix.go }} tests @ ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Install Linux dependencies
+        if: startsWith(matrix.os, 'ubuntu-')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -yq librocksdb-dev
+
+      - name: Install MacOS dependencies
+        if: startsWith(matrix.os, 'macos-')
+        run: |
+          brew update
+          brew install rocksdb
+
+      - name: Install Golang ${{ matrix.go }}
+        id: install-golang
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+      - run: go version
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Cache Golang modules
+        uses: actions/cache@v2
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Test v5
+        if: startsWith(matrix.os, 'ubuntu-')
+        run: go test -v
+
+      - name: Test v6.16 or later
+        if: startsWith(matrix.os, 'macos-')
+        run: go test -v -tags rocksdb_6_16
+
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -yq librocksdb-dev
+      - uses: actions/checkout@v2
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: latest

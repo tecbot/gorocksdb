@@ -41,8 +41,8 @@ func TestCheckpoint(t *testing.T) {
 	opts := NewDefaultOptions()
 	opts.SetCreateIfMissing(true)
 	dbCheck, err = OpenDb(opts, dir)
-	defer dbCheck.Close()
 	ensure.Nil(t, err)
+	defer dbCheck.Close()
 
 	// test keys
 	var value *Slice
