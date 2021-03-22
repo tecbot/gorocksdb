@@ -4,6 +4,14 @@ package gorocksdb
 
 import "C"
 
+// DataBlockIndexType specifies the index type that will be used for the data block.
+type DataBlockIndexType byte
+
+const (
+	KDataBlockBinarySearch  = 0 // traditional block type
+	KDataBlockBinaryAndHash = 1 // additional hash index
+)
+
 // SetDataBlockIndexType sets the index type that will be used for the data block.
 func (opts *BlockBasedTableOptions) SetDataBlockIndexType(value DataBlockIndexType) {
 	C.rocksdb_block_based_options_set_data_block_index_type(opts.c, C.int(value))

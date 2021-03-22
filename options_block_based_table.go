@@ -18,14 +18,6 @@ const (
 	KTwoLevelIndexSearchIndexType = 2
 )
 
-// DataBlockIndexType specifies the index type that will be used for the data block.
-type DataBlockIndexType byte
-
-const (
-	kDataBlockBinarySearch  = 0 // traditional block type
-	kDataBlockBinaryAndHash = 1 // additional hash index
-)
-
 // BlockBasedTableOptions represents block-based table options.
 type BlockBasedTableOptions struct {
 	c *C.rocksdb_block_based_table_options_t
