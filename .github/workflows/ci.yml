@@ -10,7 +10,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [ubuntu-20.04, ubuntu-18.04, macos-11.0, macos-10.15]
+        os: [ubuntu-latest, macos-latest]
         go: [1.16.x, 1.15.x, 1.14.x, 1.13.x]
     name: Go ${{ matrix.go }} tests @ ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
@@ -54,7 +54,7 @@ jobs:
 
   golangci:
     name: lint
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Install Linux dependencies
         run: |
@@ -64,5 +64,4 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.38
-          working-directory: ${{ env.GITHUB_WORKSPACE }}
+          version: latest
