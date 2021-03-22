@@ -2,7 +2,9 @@ package gorocksdb
 
 // #include "rocksdb/c.h"
 import "C"
-import "unsafe"
+import (
+	"unsafe"
+)
 
 // ReadTier controls fetching of data during a read request.
 // An application can issue a read request (via Get/Iterators) and specify
@@ -127,6 +129,45 @@ func (opts *ReadOptions) SetPinData(value bool) {
 // Default: 0
 func (opts *ReadOptions) SetReadaheadSize(value uint64) {
 	C.rocksdb_readoptions_set_readahead_size(opts.c, C.size_t(value))
+}
+
+// SetTotalOrderSeek specifies the value of "total_order_seek".
+// Enable a total order seek regardless of index format (e.g. hash index)
+// used in the table. Some table format (e.g. plain table) may not support
+// this option.
+// If true when calling Get(), we also skip prefix bloom when reading from
+// block based table. It provides a way to read existing data after
+// changing implementation of prefix extractor.
+// Default: false
+func (opts *ReadOptions) SetTotalOrderSeek(value bool) {
+	C.rocksdb_readoptions_set_total_order_seek(opts.c, boolToChar(value))
+}
+
+// SetMaxSkippableInternalKeys specifies the value of "max_skippable_internal_keys".
+// A threshold for the number of keys that can be skipped before failing an
+// iterator seek as incomplete. The default value of 0 should be used to
+// never fail a request as incomplete, even on skipping too many keys.
+// Default: 0
+func (opts *ReadOptions) SetMaxSkippableInternalKeys(value uint64) {
+	C.rocksdb_readoptions_set_max_skippable_internal_keys(opts.c, C.uint64_t(value))
+}
+
+// SetBackgroundPurgeOnIteratorCleanup specifies the value of "background_purge_on_iterator_cleanup".
+// If true, when PurgeObsoleteFile is called in CleanupIteratorState, we
+// schedule a background job in the flush job queue and delete obsolete files
+// in background.
+// Default: false
+func (opts *ReadOptions) SetBackgroundPurgeOnIteratorCleanup(value bool) {
+	C.rocksdb_readoptions_set_background_purge_on_iterator_cleanup(opts.c, boolToChar(value))
+}
+
+// SetIgnoreRangeDeletions specifies the value of "ignore_range_deletions".
+// If true, keys deleted using the DeleteRange() API will be visible to
+// readers until they are naturally deleted during compaction. This improves
+// read performance in DBs with many range deletions.
+// Default: false
+func (opts *ReadOptions) SetIgnoreRangeDeletions(value bool) {
+	C.rocksdb_readoptions_set_ignore_range_deletions(opts.c, boolToChar(value))
 }
 
 // Destroy deallocates the ReadOptions object.

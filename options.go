@@ -307,6 +307,18 @@ func (opts *Options) SetAllowConcurrentMemtableWrites(allow bool) {
 	C.rocksdb_options_set_allow_concurrent_memtable_write(opts.c, boolToChar(allow))
 }
 
+// SetEnableWriteThreadAdaptiveYield sets enable_write_thread_adaptive_yield.
+//
+// If true, threads synchronizing with the write batch group leader will
+// wait for up to write_thread_max_yield_usec before blocking on a mutex.
+// This can substantially improve throughput for concurrent workloads,
+// regardless of whether allow_concurrent_memtable_write is enabled.
+//
+// Default: true
+func (opts *Options) SetEnableWriteThreadAdaptiveYield(allow bool) {
+	C.rocksdb_options_set_enable_write_thread_adaptive_yield(opts.c, boolToChar(allow))
+}
+
 // OptimizeLevelStyleCompaction optimize the DB for leveld compaction.
 //
 // Default values for some parameters in ColumnFamilyOptions are not
@@ -426,12 +438,6 @@ func (opts *Options) SetCompressionPerLevel(value []CompressionType) {
 // SetMinLevelToCompress sets the start level to use compression.
 func (opts *Options) SetMinLevelToCompress(value int) {
 	C.rocksdb_options_set_min_level_to_compress(opts.c, C.int(value))
-}
-
-// SetCompressionOptions sets different options for compression algorithms.
-// Default: nil
-func (opts *Options) SetCompressionOptions(value *CompressionOptions) {
-	C.rocksdb_options_set_compression_options(opts.c, C.int(value.WindowBits), C.int(value.Level), C.int(value.Strategy), C.int(value.MaxDictBytes))
 }
 
 // SetPrefixExtractor sets the prefic extractor.
@@ -739,6 +745,19 @@ func (opts *Options) SetKeepLogFileNum(value int) {
 	C.rocksdb_options_set_keep_log_file_num(opts.c, C.size_t(value))
 }
 
+// SetRecycleLogFileNum sets the recycle log files.
+//
+// If non-zero, we will reuse previously written log files for new
+// logs, overwriting the old data.  The value indicates how many
+// such files we will keep around at any point in time for later
+// use.  This is more efficient because the blocks are already
+// allocated and fdatasync does not need to update the inode after
+// each write.
+// Default: 0
+func (opts *Options) SetRecycleLogFileNum(value int) {
+	C.rocksdb_options_set_recycle_log_file_num(opts.c, C.size_t(value))
+}
+
 // SetSoftRateLimit sets the soft rate limit.
 //
 // Puts are delayed 0-1 ms when any level has a compaction score that exceeds
@@ -851,6 +870,25 @@ func (opts *Options) SetWalSizeLimitMb(value uint64) {
 // Default: false
 func (opts *Options) SetEnablePipelinedWrite(value bool) {
 	C.rocksdb_options_set_enable_pipelined_write(opts.c, boolToChar(value))
+}
+
+// SetMaxSubcompactions sets the maximum number of threads that will
+// concurrently perform a compaction job by breaking it into multiple,
+// smaller ones that are run simultaneously.
+// Default: 1 (i.e. no subcompactions)
+//
+// Dynamically changeable through SetDBOptions() API.
+func (opts *Options) SetMaxSubcompactions(value uint) {
+	C.rocksdb_options_set_max_subcompactions(opts.c, C.uint32_t(value))
+}
+
+// SetMaxBackgroundJobs sets the maximum number of concurrent background jobs (compactions and flushes).
+//
+// Default: 2
+//
+// Dynamically changeable through SetDBOptions() API.
+func (opts *Options) SetMaxBackgroundJobs(value int) {
+	C.rocksdb_options_set_max_background_jobs(opts.c, C.int(value))
 }
 
 // SetManifestPreallocationSize sets the number of bytes
@@ -969,6 +1007,31 @@ func (opts *Options) SetBytesPerSync(value uint64) {
 	C.rocksdb_options_set_bytes_per_sync(opts.c, C.uint64_t(value))
 }
 
+// SetWalBytesPerSync sets the bytes per sync for WAL files.
+//
+// Same as bytes_per_sync, but applies to WAL files
+//
+// Default: 0, turned off
+//
+// Dynamically changeable through SetDBOptions() API.
+func (opts *Options) SetWalBytesPerSync(value uint64) {
+	C.rocksdb_options_set_wal_bytes_per_sync(opts.c, C.uint64_t(value))
+}
+
+// SetWritableFileMaxBufferSize sets the maximum buffer size that is used by WritableFileWriter.
+//
+// On Windows, we need to maintain an aligned buffer for writes.
+// We allow the buffer to grow until it's size hits the limit in buffered
+// IO and fix the buffer size when using direct IO to ensure alignment of
+// write requests if the logical sector size is unusual
+//
+// Default: 1024 * 1024 (1 MB)
+//
+// Dynamically changeable through SetDBOptions() API.
+func (opts *Options) SetWritableFileMaxBufferSize(value uint64) {
+	C.rocksdb_options_set_writable_file_max_buffer_size(opts.c, C.uint64_t(value))
+}
+
 // SetCompactionStyle sets the compaction style.
 // Default: LevelCompactionStyle
 func (opts *Options) SetCompactionStyle(value CompactionStyle) {
@@ -1029,6 +1092,15 @@ func (opts *Options) SetInplaceUpdateSupport(value bool) {
 // Default: 10000, if inplace_update_support = true, else 0.
 func (opts *Options) SetInplaceUpdateNumLocks(value int) {
 	C.rocksdb_options_set_inplace_update_num_locks(opts.c, C.size_t(value))
+}
+
+// SetReportBgIoStats enable/disable to measure IO stats in compactions and flushes.
+//
+// Default: false
+//
+// Dynamically changeable through SetOptions() API
+func (opts *Options) SetReportBgIoStats(value bool) {
+	C.rocksdb_options_set_inplace_update_support(opts.c, boolToChar(value))
 }
 
 // SetMemtableHugePageSize sets the page size for huge page for
@@ -1094,6 +1166,20 @@ func (opts *Options) PrepareForBulkLoad() {
 // iteration is very rare and writes are generally not issued after reads begin.
 func (opts *Options) SetMemtableVectorRep() {
 	C.rocksdb_options_set_memtable_vector_rep(opts.c)
+}
+
+// SetMemtablePrefixBloomSizeRatio sets memtable_prefix_bloom_size_ratio.
+//
+// if prefix_extractor is set and memtable_prefix_bloom_size_ratio is not 0,
+// create prefix bloom for memtable with the size of
+// write_buffer_size * memtable_prefix_bloom_size_ratio.
+// If it is larger than 0.25, it is sanitized to 0.25.
+//
+// Default: 0 (disable)
+//
+// Dynamically changeable through SetOptions() API
+func (opts *Options) SetMemtablePrefixBloomSizeRatio(value float64) {
+	C.rocksdb_options_set_memtable_prefix_bloom_size_ratio(opts.c, C.double(value))
 }
 
 // SetHashSkipListRep sets a hash skip list as MemTableRep.
@@ -1194,6 +1280,17 @@ func (opts *Options) SetMemTablePrefixBloomSizeRatio(value float64) {
 // Default: false
 func (opts *Options) SetOptimizeFiltersForHits(value bool) {
 	C.rocksdb_options_set_optimize_filters_for_hits(opts.c, C.int(btoi(value)))
+}
+
+// SetSkipStatsUpdateOnDbOpen sets skip_stats_update_on_db_open
+// If true, then DB::Open() will not update the statistics used to optimize
+// compaction decision by loading table properties from many files.
+// Turning off this feature will improve DBOpen time especially in
+// disk environment.
+//
+// Default: false
+func (opts *Options) SetSkipStatsUpdateOnDbOpen(value bool) {
+	C.rocksdb_options_set_skip_stats_update_on_db_open(opts.c, boolToChar(value))
 }
 
 // Destroy deallocates the Options object.
