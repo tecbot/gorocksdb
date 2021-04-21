@@ -93,6 +93,22 @@ func (opts *ReadOptions) SetTailing(value bool) {
 	C.rocksdb_readoptions_set_tailing(opts.c, boolToChar(value))
 }
 
+// SetIterateLowerBound specifies "iterate_lower_bound", which defines
+// the extent upto which the forward iterator can returns entries.
+// Once the bound is reached, Valid() will be false.
+// "iterate_lower_bound" is exclusive ie the bound value is
+// not a valid entry.  If iterator_extractor is not null, the Seek target
+// and iterator_lower_bound need to have the same prefix.
+// This is because ordering is not guaranteed outside of prefix domain.
+// There is no lower bound on the iterator. If needed, that can be easily
+// implemented.
+// Default: nullptr
+func (opts *ReadOptions) SetIterateLowerBound(key []byte) {
+	cKey := byteToChar(key)
+	cKeyLen := C.size_t(len(key))
+	C.rocksdb_readoptions_set_iterate_lower_bound(opts.c, cKey, cKeyLen)
+}
+
 // SetIterateUpperBound specifies "iterate_upper_bound", which defines
 // the extent upto which the forward iterator can returns entries.
 // Once the bound is reached, Valid() will be false.
