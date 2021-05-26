@@ -14,6 +14,7 @@ func TestMemoryUsage(t *testing.T) {
 	cache := NewLRUCache(8 * 1024 * 1024)
 	bbto := NewDefaultBlockBasedTableOptions()
 	bbto.SetBlockCache(cache)
+	defer bbto.Destroy()
 	defer cache.Destroy()
 
 	applyOpts := func(opts *Options) {
@@ -40,6 +41,11 @@ func TestMemoryUsage(t *testing.T) {
 
 	err = db.Put(wo, key, value)
 	ensure.Nil(t, err)
+
+	// A single Put is not enough to increase approximate memtable usage.
+	err = db.Put(wo, key, value)
+	ensure.Nil(t, err)
+
 	_, err = db.Get(ro, key)
 	ensure.Nil(t, err)
 

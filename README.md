@@ -4,7 +4,7 @@
 
 ## Install
 
-You'll need to build [RocksDB](https://github.com/facebook/rocksdb) v5.16+ on your machine.
+You'll need to build [RocksDB](https://github.com/facebook/rocksdb) v6.16+ on your machine.
 
 After that, you can install gorocksdb using the following command:
 
@@ -14,5 +14,3 @@ After that, you can install gorocksdb using the following command:
 
 Please note that this package might upgrade the required RocksDB version at any moment.
 Vendoring is thus highly recommended if you require high stability.
-
-*The [embedded CockroachDB RocksDB](https://github.com/cockroachdb/c-rocksdb) is no longer supported in gorocksdb.*
