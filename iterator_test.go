@@ -1,4 +1,4 @@
-package gorocksdb
+package rocks
 
 import (
 	"testing"

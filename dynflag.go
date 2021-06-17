@@ -1,6 +1,6 @@
 // +build !linux !static
 
-package gorocksdb
+package rocks
 
 // #cgo LDFLAGS: -lrocksdb -lstdc++ -lm -ldl
 import "C"

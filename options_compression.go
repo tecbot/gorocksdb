@@ -1,4 +1,4 @@
-package gorocksdb
+package rocks
 
 // CompressionOptions represents options for different compression algorithms like Zlib.
 type CompressionOptions struct {
