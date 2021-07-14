@@ -206,3 +206,19 @@ func (transactionDB *OptimisticTransactionDB) Close() {
 	C.rocksdb_optimistictransactiondb_close(transactionDB.c)
 	transactionDB.c = nil
 }
+
+// NewCheckpoint creates a new Checkpoint for this db.
+func (db *OptimisticTransactionDB) NewCheckpoint() (*Checkpoint, error) {
+	var (
+		cErr *C.char
+	)
+	cCheckpoint := C.rocksdb_optimistictransactiondb_checkpoint_object_create(
+		db.c, &cErr,
+	)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+
+	return NewNativeCheckpoint(cCheckpoint), nil
+}
