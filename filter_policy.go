@@ -49,10 +49,8 @@ func NewBloomFilter(bitsPerKey int) FilterPolicy {
 	return NewNativeFilterPolicy(C.rocksdb_filterpolicy_create_bloom(C.int(bitsPerKey)))
 }
 
-// NewBloomFilterFull returns a new filter policy that uses a bloom filter
-// with the given `bitsPerKey`, a "full" bloom filter will construct
-// a single bloom filter for each SST file, it may improve read performance
-// but will require more memory and time to build.
+// NewBloomFilterFull returns a new filter policy created with use_block_based_builder=false
+// (use full or partitioned filter).
 func NewBloomFilterFull(bitsPerKey int) FilterPolicy {
 	return NewNativeFilterPolicy(C.rocksdb_filterpolicy_create_bloom_full(C.int(bitsPerKey)))
 }
