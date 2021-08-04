@@ -52,6 +52,15 @@ func (db *TransactionDB) ReleaseSnapshot(snapshot *Snapshot) {
 	snapshot.c = nil
 }
 
+// GetProperty returns the value of a database property.
+func (db *TransactionDB) GetProperty(propName string) string {
+	cprop := C.CString(propName)
+	defer C.free(unsafe.Pointer(cprop))
+	cValue := C.rocksdb_transactiondb_property_value(db.c, cprop)
+	defer C.rocksdb_free(unsafe.Pointer(cValue))
+	return C.GoString(cValue)
+}
+
 // TransactionBegin begins a new transaction
 // with the WriteOptions and TransactionOptions given.
 func (db *TransactionDB) TransactionBegin(
@@ -190,6 +199,15 @@ func (db *OptimisticTransactionDB) GetBaseDB() *DB {
 		name:   db.name,
 		opts:   db.opts,
 	}
+}
+
+// GetProperty returns the value of a database property.
+func (db *OptimisticTransactionDB) GetProperty(propName string) string {
+	cprop := C.CString(propName)
+	defer C.free(unsafe.Pointer(cprop))
+	cValue := C.rocksdb_optimistictransactiondb_property_value(db.c, cprop)
+	defer C.rocksdb_free(unsafe.Pointer(cValue))
+	return C.GoString(cValue)
 }
 
 // TransactionBegin begins a new transaction
