@@ -153,6 +153,17 @@ func newSecondaryTestDB(t *testing.T, name string) *DB {
 	return db
 }
 
+func newSecondaryTestDBCF(t *testing.T, name string, cfNames []string, cfOpts []*Options) (*DB, []*ColumnFamilyHandle) {
+	secondaryDir := name + "-secondary"
+
+	opts := NewDefaultOptions()
+	opts.SetMaxOpenFiles(-1)
+	db, handles, err := OpenDbAsSecondaryColumnFamilies(opts, name, secondaryDir, cfNames, cfOpts)
+	ensure.Nil(t, err)
+
+	return db, handles
+}
+
 func newTestDBPathNames(t *testing.T, name string, names []string, target_sizes []uint64, applyOpts func(opts *Options)) *DB {
 	ensure.DeepEqual(t, len(target_sizes), len(names))
 	ensure.NotDeepEqual(t, len(names), 0)
@@ -316,7 +327,7 @@ func TestSecondaryDB(t *testing.T) {
 	ensure.Nil(t, err)
 	ensure.NotNil(t, s)
 
-	// Open a secondary database, and ensure that we cannot see the key yet
+	// Get the key from the secondary database, and ensure that we cannot see the key yet
 	s, err = secondaryDB.Get(ro, []byte("hello"))
 	ensure.Nil(t, err)
 	ensure.NotNil(t, s)
@@ -328,6 +339,61 @@ func TestSecondaryDB(t *testing.T) {
 
 	// Ensure that now that it has caught up that the key is now present
 	s, err = secondaryDB.Get(ro, []byte("hello"))
+	ensure.Nil(t, err)
+	ensure.NotNil(t, s)
+	ensure.DeepEqual(t, s.Data(), []byte("world"))
+}
+
+func TestSecondaryDBColumnFamilies(t *testing.T) {
+	var (
+		db = newTestDB(t, "TestSecondaryDB", nil)
+		o  = NewDefaultOptions()
+		ro = NewDefaultReadOptions()
+		wo = NewDefaultWriteOptions()
+		fo = NewDefaultFlushOptions()
+	)
+	defer func() {
+		fo.Destroy()
+		wo.Destroy()
+		ro.Destroy()
+		o.Destroy()
+		db.Close()
+
+		os.RemoveAll(db.Name())
+	}()
+
+	// Create a column family
+	primaryCF, err := db.CreateColumnFamily(o, "mycf")
+	ensure.Nil(t, err)
+
+	// Open a secondary database, opening the created column family
+	secondaryDB, handles := newSecondaryTestDBCF(t, db.Name(), []string{"default", "mycf"}, []*Options{o, o})
+	defer func() {
+		secondaryDB.Close()
+		os.RemoveAll(secondaryDB.SecondaryPath())
+	}()
+
+	// Put a key into the primary database
+	ensure.Nil(t, db.PutCF(wo, primaryCF, []byte("hello"), []byte("world")))
+	ensure.Nil(t, db.FlushCF(primaryCF, fo))
+
+	// Ensure the key is written correctly
+	s, err := db.GetCF(ro, primaryCF, []byte("hello"))
+	ensure.Nil(t, err)
+	ensure.NotNil(t, s)
+
+	// Get the key from the secondary database, and ensure that we cannot see the key yet
+	s, err = secondaryDB.GetCF(ro, handles[1], []byte("hello"))
+	ensure.Nil(t, err)
+	ensure.NotNil(t, s)
+	ensure.DeepEqual(t, s.Data(), []byte(nil))
+
+	// Catch up the secondary with the current state of the primary
+	err = secondaryDB.TryCatchUpWithPrimary()
+	ensure.Nil(t, err)
+
+	// Ensure that now that it has caught up that the key is now present
+	s, err = secondaryDB.GetCF(ro, handles[1], []byte("hello"))
 	ensure.Nil(t, err)
 	ensure.NotNil(t, s)
 	ensure.DeepEqual(t, s.Data(), []byte("world"))
