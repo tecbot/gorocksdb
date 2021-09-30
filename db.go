@@ -18,9 +18,10 @@ type Range struct {
 
 // DB is a reusable handle to a RocksDB database on disk, created by Open.
 type DB struct {
-	c    *C.rocksdb_t
-	name string
-	opts *Options
+	c             *C.rocksdb_t
+	name          string
+	secondaryPath string
+	opts          *Options
 }
 
 // OpenDb opens a database with the specified options.
@@ -201,6 +202,93 @@ func OpenDbForReadOnlyColumnFamilies(
 	}, cfHandles, nil
 }
 
+// OpenDbAsSecondary opens a database with the specified options for secondary usage.
+func OpenDbAsSecondary(opts *Options, name string, secondaryPath string) (*DB, error) {
+	var (
+		cErr           *C.char
+		cName          = C.CString(name)
+		cSecondaryPath = C.CString(secondaryPath)
+	)
+	defer C.free(unsafe.Pointer(cName))
+	defer C.free(unsafe.Pointer(cSecondaryPath))
+	db := C.rocksdb_open_as_secondary(opts.c, cName, cSecondaryPath, &cErr)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return &DB{
+		name:          name,
+		secondaryPath: secondaryPath,
+		c:             db,
+		opts:          opts,
+	}, nil
+}
+
+// OpenDbAsSecondaryColumnFamilies opens a database with the specified column
+// families in secondary mode.
+func OpenDbAsSecondaryColumnFamilies(
+	opts *Options,
+	name string,
+	secondaryPath string,
+	cfNames []string,
+	cfOpts []*Options,
+) (*DB, []*ColumnFamilyHandle, error) {
+	numColumnFamilies := len(cfNames)
+	if numColumnFamilies != len(cfOpts) {
+		return nil, nil, errors.New("must provide the same number of column family names and options")
+	}
+
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+
+	cSecondaryPath := C.CString(secondaryPath)
+	defer C.free(unsafe.Pointer(cSecondaryPath))
+
+	cNames := make([]*C.char, numColumnFamilies)
+	for i, s := range cfNames {
+		cNames[i] = C.CString(s)
+	}
+	defer func() {
+		for _, s := range cNames {
+			C.free(unsafe.Pointer(s))
+		}
+	}()
+
+	cOpts := make([]*C.rocksdb_options_t, numColumnFamilies)
+	for i, o := range cfOpts {
+		cOpts[i] = o.c
+	}
+
+	cHandles := make([]*C.rocksdb_column_family_handle_t, numColumnFamilies)
+
+	var cErr *C.char
+	db := C.rocksdb_open_as_secondary_column_families(
+		opts.c,
+		cName,
+		cSecondaryPath,
+		C.int(numColumnFamilies),
+		&cNames[0],
+		&cOpts[0],
+		&cHandles[0],
+		&cErr,
+	)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return nil, nil, errors.New(C.GoString(cErr))
+	}
+
+	cfHandles := make([]*ColumnFamilyHandle, numColumnFamilies)
+	for i, c := range cHandles {
+		cfHandles[i] = NewNativeColumnFamilyHandle(c)
+	}
+
+	return &DB{
+		name: name,
+		c:    db,
+		opts: opts,
+	}, cfHandles, nil
+}
+
 // ListColumnFamilies lists the names of the column families in the DB.
 func ListColumnFamilies(opts *Options, name string) ([]string, error) {
 	var (
@@ -235,6 +323,11 @@ func (db *DB) UnsafeGetDB() unsafe.Pointer {
 // Name returns the name of the database.
 func (db *DB) Name() string {
 	return db.name
+}
+
+// SecondaryPath returns the secondary path of the database, if it is a secondary database instance.
+func (db *DB) SecondaryPath() string {
+	return db.secondaryPath
 }
 
 // Get returns the data associated with the key from the database.
@@ -929,6 +1022,19 @@ func (db *DB) NewCheckpoint() (*Checkpoint, error) {
 // Close closes the database.
 func (db *DB) Close() {
 	C.rocksdb_close(db.c)
+}
+
+func (db *DB) TryCatchUpWithPrimary() error {
+	var (
+		cErr *C.char
+	)
+	C.rocksdb_try_catch_up_with_primary(db.c, &cErr)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+
+	return nil
 }
 
 // DestroyDb removes a database entirely, removing everything from the
