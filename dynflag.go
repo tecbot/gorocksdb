@@ -1,4 +1,5 @@
-// +build !linux !static
+//go:build !linux || !rocksdbstatic
+// +build !linux !rocksdbstatic
 
 package gorocksdb
 
