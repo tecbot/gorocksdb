@@ -14,6 +14,22 @@ func TestOpenDb(t *testing.T) {
 	defer db.Close()
 }
 
+func TestOpenDbColumnFamiliesWithTTL(t *testing.T) {
+	dir, err := ioutil.TempDir("", "gorocksdb-TestOpenDbColumnFamiliesWithTtl")
+	ensure.Nil(t, err)
+
+	opts := NewDefaultOptions()
+	defer opts.Destroy()
+
+	opts.SetCreateIfMissing(true)
+	opts.SetCreateIfMissingColumnFamilies(true)
+
+	db, _, err := OpenDbColumnFamiliesWithTTL(opts, dir, []string{"default", "mycf"}, []*Options{opts, opts}, []int{3600})
+	defer db.Close()
+
+	ensure.Nil(t, err)
+}
+
 func TestDBCRUD(t *testing.T) {
 	db := newTestDB(t, "TestDBGet", nil)
 	defer db.Close()
