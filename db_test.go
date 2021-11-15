@@ -24,10 +24,33 @@ func TestOpenDbColumnFamiliesWithTTL(t *testing.T) {
 	opts.SetCreateIfMissing(true)
 	opts.SetCreateIfMissingColumnFamilies(true)
 
-	db, _, err := OpenDbColumnFamiliesWithTTL(opts, dir, []string{"default", "mycf"}, []*Options{opts, opts}, []int{3600})
+	db, _, err := OpenDbColumnFamiliesWithTTL(opts, dir, []string{"default", "mycf"}, []*Options{opts, opts}, []int{3600, 3600})
 	defer db.Close()
 
 	ensure.Nil(t, err)
+}
+
+func TestCreateColumnFamilyWithTTL(t *testing.T) {
+	db := newTestDBWithTTL(t, "TestCreateColumnFamilyWithTTL", nil)
+	defer db.Close()
+
+	var (
+		givenKey = []byte("hello")
+		givenVal = []byte("world")
+		o        = NewDefaultOptions()
+		wo       = NewDefaultWriteOptions()
+		ro       = NewDefaultReadOptions()
+	)
+
+	cf, err := db.CreateColumnFamilyWithTTL(o, "cf", 3600)
+	ensure.Nil(t, err)
+
+	ensure.Nil(t, db.PutCF(wo, cf, givenKey, givenVal))
+
+	v, err := db.GetCF(ro, cf, givenKey)
+	defer v.Free()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, v.Data(), givenVal)
 }
 
 func TestDBCRUD(t *testing.T) {
@@ -153,6 +176,24 @@ func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
 		applyOpts(opts)
 	}
 	db, err := OpenDb(opts, dir)
+	ensure.Nil(t, err)
+
+	return db
+}
+
+func newTestDBWithTTL(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
+	dir, err := ioutil.TempDir("", "gorocksdb-"+name)
+	ensure.Nil(t, err)
+
+	opts := NewDefaultOptions()
+	// test the ratelimiter
+	rateLimiter := NewRateLimiter(1024, 100*1000, 10)
+	opts.SetRateLimiter(rateLimiter)
+	opts.SetCreateIfMissing(true)
+	if applyOpts != nil {
+		applyOpts(opts)
+	}
+	db, err := OpenDbWithTTL(opts, dir, 3600)
 	ensure.Nil(t, err)
 
 	return db

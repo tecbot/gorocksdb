@@ -153,6 +153,10 @@ func OpenDbColumnFamiliesWithTTL(
 		return nil, nil, errors.New("must provide the same number of column family names and options")
 	}
 
+	if numColumnFamilies != len(cfTtls) {
+		return nil, nil, errors.New("must provide the same number of column family names and ttls")
+	}
+
 	cName := C.CString(name)
 	defer C.free(unsafe.Pointer(cName))
 
@@ -718,6 +722,22 @@ func (db *DB) CreateColumnFamily(opts *Options, name string) (*ColumnFamilyHandl
 	)
 	defer C.free(unsafe.Pointer(cName))
 	cHandle := C.rocksdb_create_column_family(db.c, opts.c, cName, &cErr)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return NewNativeColumnFamilyHandle(cHandle), nil
+}
+
+// CreateColumnFamilyWithTTL creates a new column family with a TTL.
+func (db *DB) CreateColumnFamilyWithTTL(opts *Options, name string, ttl int) (*ColumnFamilyHandle, error) {
+	var (
+		cErr  *C.char
+		cName = C.CString(name)
+		cTtl = C.int(ttl)
+	)
+	defer C.free(unsafe.Pointer(cName))
+	cHandle := C.rocksdb_create_column_family_with_ttl(db.c, opts.c, cName, cTtl, &cErr)
 	if cErr != nil {
 		defer C.rocksdb_free(unsafe.Pointer(cErr))
 		return nil, errors.New(C.GoString(cErr))
