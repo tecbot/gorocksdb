@@ -140,6 +140,76 @@ func OpenDbColumnFamilies(
 	}, cfHandles, nil
 }
 
+// OpenDbColumnFamiliesWithTTL opens a database with the specified column families.
+func OpenDbColumnFamiliesWithTTL(
+	opts *Options,
+	name string,
+	cfNames []string,
+	cfOpts []*Options,
+	cfTtls []int,
+) (*DB, []*ColumnFamilyHandle, error) {
+	numColumnFamilies := len(cfNames)
+	if numColumnFamilies != len(cfOpts) {
+		return nil, nil, errors.New("must provide the same number of column family names and options")
+	}
+
+	if numColumnFamilies != len(cfTtls) {
+		return nil, nil, errors.New("must provide the same number of column family names and ttls")
+	}
+
+	cName := C.CString(name)
+	defer C.free(unsafe.Pointer(cName))
+
+	cNames := make([]*C.char, numColumnFamilies)
+	for i, s := range cfNames {
+		cNames[i] = C.CString(s)
+	}
+	defer func() {
+		for _, s := range cNames {
+			C.free(unsafe.Pointer(s))
+		}
+	}()
+
+	cOpts := make([]*C.rocksdb_options_t, numColumnFamilies)
+	for i, o := range cfOpts {
+		cOpts[i] = o.c
+	}
+
+	cHandles := make([]*C.rocksdb_column_family_handle_t, numColumnFamilies)
+
+	cTtls := make([]C.int, numColumnFamilies)
+	for i, t := range cfTtls {
+		cTtls[i] = C.int(t)
+	}
+
+	var cErr *C.char
+	db := C.rocksdb_open_column_families_with_ttl(
+		opts.c,
+		cName,
+		C.int(numColumnFamilies),
+		&cNames[0],
+		&cOpts[0],
+		&cHandles[0],
+		&cTtls[0],
+		&cErr,
+	)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return nil, nil, errors.New(C.GoString(cErr))
+	}
+
+	cfHandles := make([]*ColumnFamilyHandle, numColumnFamilies)
+	for i, c := range cHandles {
+		cfHandles[i] = NewNativeColumnFamilyHandle(c)
+	}
+
+	return &DB{
+		name: name,
+		c:    db,
+		opts: opts,
+	}, cfHandles, nil
+}
+
 // OpenDbForReadOnlyColumnFamilies opens a database with the specified column
 // families in read only mode.
 func OpenDbForReadOnlyColumnFamilies(
@@ -659,6 +729,22 @@ func (db *DB) CreateColumnFamily(opts *Options, name string) (*ColumnFamilyHandl
 	return NewNativeColumnFamilyHandle(cHandle), nil
 }
 
+// CreateColumnFamilyWithTTL creates a new column family with a TTL.
+func (db *DB) CreateColumnFamilyWithTTL(opts *Options, name string, ttl int) (*ColumnFamilyHandle, error) {
+	var (
+		cErr  *C.char
+		cName = C.CString(name)
+		cTtl = C.int(ttl)
+	)
+	defer C.free(unsafe.Pointer(cName))
+	cHandle := C.rocksdb_create_column_family_with_ttl(db.c, opts.c, cName, cTtl, &cErr)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return NewNativeColumnFamilyHandle(cHandle), nil
+}
+
 // DropColumnFamily drops a column family.
 func (db *DB) DropColumnFamily(c *ColumnFamilyHandle) error {
 	var cErr *C.char
@@ -1024,6 +1110,7 @@ func (db *DB) Close() {
 	C.rocksdb_close(db.c)
 }
 
+// TryCatchUpWithPrimary will sync a secondary db with the state of the primary
 func (db *DB) TryCatchUpWithPrimary() error {
 	var (
 		cErr *C.char
