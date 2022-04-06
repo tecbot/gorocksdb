@@ -2,8 +2,10 @@ name: Mirror repo to S3
 on:
   schedule:
     # Runs everyday at 4:50 pm
-    - cron: '50 16 * * * '
+    - cron: '50 16 * * *'
   workflow_dispatch:
+  
+  
 jobs:
   s3Backup:
     runs-on: docker-builds
@@ -19,7 +21,7 @@ jobs:
           echo ::set-output name=YESTERDAY_DATE::${YESTERDAY_DATE}
           echo $GIT_COMMIT_DATE
           echo $YESTERDAY_DATE
-      
+          
       - name: Create backup
         if: steps.get_info.outputs.GIT_COMMIT_DATE == steps.get_info.outputs.YESTERDAY_DATE
         run: |
