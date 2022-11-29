@@ -135,6 +135,60 @@ func TestTransactionDBCRUD(t *testing.T) {
 
 }
 
+func TestTransactionDBCRUDColumnFamilies(t *testing.T) {
+	test_cf_names := []string{"default", "cf1", "cf2"}
+	db, cf_handles := newTestTransactionDBColumnFamilies(t, "TestOpenTransactionDbColumnFamilies", test_cf_names)
+	ensure.True(t, 3 == len(cf_handles))
+	defer db.Close()
+
+	var (
+		wo = NewDefaultWriteOptions()
+		ro = NewDefaultReadOptions()
+		to = NewDefaultTransactionOptions()
+	)
+
+	{
+		txn := db.TransactionBegin(wo, to, nil)
+		defer txn.Destroy()
+		// RYW.
+		for idx, cf_handle := range cf_handles {
+			ensure.Nil(t, txn.PutCF(cf_handle, []byte(test_cf_names[idx]+"_key"), []byte(test_cf_names[idx]+"_value")))
+			val, err := txn.GetCF(ro, cf_handle, []byte(test_cf_names[idx]+"_key"))
+			defer val.Free()
+			ensure.Nil(t, err)
+			ensure.DeepEqual(t, val.Data(), []byte(test_cf_names[idx]+"_value"))
+		}
+		txn.Commit()
+	}
+
+	// Read after commit
+	for idx, cf_handle := range cf_handles {
+		val, err := db.GetCF(ro, cf_handle, []byte(test_cf_names[idx]+"_key"))
+		defer val.Free()
+		ensure.Nil(t, err)
+		ensure.DeepEqual(t, val.Data(), []byte(test_cf_names[idx]+"_value"))
+	}
+
+	// Delete
+	{
+		txn := db.TransactionBegin(wo, to, nil)
+		defer txn.Destroy()
+		// RYW.
+		for idx, cf_handle := range cf_handles {
+			ensure.Nil(t, txn.DeleteCF(cf_handle, []byte(test_cf_names[idx]+"_key")))
+		}
+		txn.Commit()
+	}
+
+	// Read after delete commit
+	for idx, cf_handle := range cf_handles {
+		val, err := db.GetCF(ro, cf_handle, []byte(test_cf_names[idx]+"_key"))
+		defer val.Free()
+		ensure.Nil(t, err)
+		ensure.True(t, val.Size() == 0)
+	}
+}
+
 func TestTransactionDBGetForUpdate(t *testing.T) {
 	lockTimeoutMilliSec := int64(50)
 	applyOpts := func(opts *Options, transactionDBOpts *TransactionDBOptions) {
@@ -162,6 +216,35 @@ func TestTransactionDBGetForUpdate(t *testing.T) {
 	if err := db.Put(wo, givenKey, givenVal); err == nil {
 		t.Error("expect locktime out error, got nil error")
 	}
+}
+
+func TestTransactionDBGetForUpdateColumnFamilies(t *testing.T) {
+	test_cf_names := []string{"default", "cf1", "cf2"}
+	db, cf_handles := newTestTransactionDBColumnFamilies(t, "TestOpenTransactionDbColumnFamilies", test_cf_names)
+	ensure.True(t, 3 == len(cf_handles))
+	defer db.Close()
+
+	var (
+		wo = NewDefaultWriteOptions()
+		ro = NewDefaultReadOptions()
+		to = NewDefaultTransactionOptions()
+	)
+
+	{
+		txn := db.TransactionBegin(wo, to, nil)
+		defer txn.Destroy()
+
+		val, err := txn.GetForUpdateCF(ro, cf_handles[1], []byte(test_cf_names[1]+"_key"))
+		defer val.Free()
+		ensure.Nil(t, err)
+		txn.PutCF(cf_handles[1], []byte(test_cf_names[1]+"_key"), []byte(test_cf_names[1]+"_value"))
+		ensure.Nil(t, txn.Commit())
+	}
+
+	// Read after update
+	val, err := db.GetCF(ro, cf_handles[1], []byte(test_cf_names[1]+"_key"))
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, val.Data(), []byte(test_cf_names[1]+"_value"))
 }
 
 func newTestTransactionDB(t *testing.T, name string, applyOpts func(opts *Options, transactionDBOpts *TransactionDBOptions)) *TransactionDB {
