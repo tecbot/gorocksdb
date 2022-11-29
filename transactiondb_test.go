@@ -12,6 +12,48 @@ func TestOpenTransactionDb(t *testing.T) {
 	defer db.Close()
 }
 
+func TestTransactionDbColumnFamilies(t *testing.T) {
+	test_cf_names := []string{"default", "cf1", "cf2"}
+	db, cf_handles := newTestTransactionDBColumnFamilies(t, "TestOpenTransactionDbColumnFamilies", test_cf_names)
+	ensure.True(t, 3 == len(cf_handles))
+	defer db.Close()
+
+	cf_names, err := ListColumnFamilies(NewDefaultOptions(), db.name)
+	ensure.Nil(t, err)
+	ensure.True(t, 3 == len(cf_names))
+	ensure.DeepEqual(t, cf_names, test_cf_names)
+
+	for idx, cf_name := range test_cf_names {
+		ensure.Nil(t, db.PutCF(NewDefaultWriteOptions(), cf_handles[idx], []byte(cf_name+"_key"), []byte(cf_name+"_value")))
+	}
+
+	for idx, cf_name := range test_cf_names {
+		val, err := db.GetCF(NewDefaultReadOptions(), cf_handles[idx], []byte(cf_name+"_key"))
+		ensure.Nil(t, err)
+		ensure.DeepEqual(t, val.Data(), []byte(cf_name+"_value"))
+	}
+
+	// Delete all keys in all column families
+	for idx, cf_name := range test_cf_names {
+		ensure.Nil(t, db.DeleteCF(NewDefaultWriteOptions(), cf_handles[idx], []byte(cf_name+"_key")))
+	}
+
+	for idx, cf_name := range test_cf_names {
+		val, err := db.GetCF(NewDefaultReadOptions(), cf_handles[idx], []byte(cf_name+"_key"))
+		ensure.Nil(t, err)
+		ensure.True(t, val.Size() == 0)
+	}
+
+	{
+		cf_handle, err := db.CreateColumnFamily(NewDefaultOptions(), "new_cf")
+		ensure.Nil(t, err)
+		ensure.NotNil(t, cf_handle)
+		cf_names, err := ListColumnFamilies(NewDefaultOptions(), db.name)
+		ensure.Nil(t, err)
+		ensure.True(t, 4 == len(cf_names))
+	}
+}
+
 func TestTransactionDBCRUD(t *testing.T) {
 	db := newTestTransactionDB(t, "TestTransactionDBGet", nil)
 	defer db.Close()
@@ -136,4 +178,20 @@ func newTestTransactionDB(t *testing.T, name string, applyOpts func(opts *Option
 	ensure.Nil(t, err)
 
 	return db
+}
+
+func newTestTransactionDBColumnFamilies(t *testing.T, name string, cfNames []string) (*TransactionDB, []*ColumnFamilyHandle) {
+	dir, err := ioutil.TempDir("", "gorockstransactiondb-"+name)
+	ensure.Nil(t, err)
+
+	opts := NewDefaultOptions()
+	opts.SetCreateIfMissing(true)
+	opts.SetCreateIfMissingColumnFamilies(true)
+	transactionDBOpts := NewDefaultTransactionDBOptions()
+	cfOpts := []*Options{opts, opts, opts}
+	db, cfHandles, err := OpenTransactionDbColumnFamilies(opts, transactionDBOpts, dir, cfNames, cfOpts)
+	ensure.Nil(t, err)
+	ensure.True(t, 3 == len(cfHandles))
+
+	return db, cfHandles
 }
