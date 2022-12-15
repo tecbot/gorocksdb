@@ -1,6 +1,7 @@
 package gorocksdb
 
 import (
+	"fmt"
 	"io/ioutil"
 	"testing"
 
@@ -135,10 +136,76 @@ func TestTransactionDBCRUD(t *testing.T) {
 
 }
 
+func TestTransactionDBWriteBatchColumnFamilies(t *testing.T) {
+	test_cf_names := []string{"default", "cf1", "cf2"}
+	db, cf_handles := newTestTransactionDBColumnFamilies(t, "TestOpenTransactionDbColumnFamilies", test_cf_names)
+	ensure.True(t, len(cf_handles) == 3)
+	defer db.Close()
+
+	var (
+		wo = NewDefaultWriteOptions()
+		ro = NewDefaultReadOptions()
+	)
+
+	// WriteBatch PutCF
+	{
+		batch := NewWriteBatch()
+		for h_idx := 1; h_idx <= 2; h_idx++ {
+			for k_idx := 0; k_idx <= 2; k_idx++ {
+				batch.PutCF(cf_handles[h_idx], []byte(fmt.Sprintf("%s_key_%d", test_cf_names[h_idx], k_idx)),
+					[]byte(fmt.Sprintf("%s_value_%d", test_cf_names[h_idx], k_idx)))
+			}
+		}
+		ensure.Nil(t, db.Write(wo, batch))
+		batch.Destroy()
+	}
+
+	// Read back
+	{
+		for h_idx := 1; h_idx <= 2; h_idx++ {
+			for k_idx := 0; k_idx <= 2; k_idx++ {
+				data, err := db.GetCF(ro, cf_handles[h_idx], []byte(fmt.Sprintf("%s_key_%d", test_cf_names[h_idx], k_idx)))
+				ensure.Nil(t, err)
+				ensure.DeepEqual(t, data.Data(), []byte(fmt.Sprintf("%s_value_%d", test_cf_names[h_idx], k_idx)))
+			}
+		}
+	}
+
+	{ // WriteBatch with DeleteRangeCF not implemented
+		batch := NewWriteBatch()
+		batch.DeleteRangeCF(cf_handles[1], []byte(test_cf_names[1]+"_key_0"), []byte(test_cf_names[1]+"_key_2"))
+		ensure.NotNil(t, db.Write(wo, batch))
+	}
+	// WriteBatch DeleteCF
+	{
+		batch := NewWriteBatch()
+		batch.DeleteCF(cf_handles[1], []byte(test_cf_names[1]+"_key_0"))
+		batch.DeleteCF(cf_handles[1], []byte(test_cf_names[1]+"_key_1"))
+		ensure.Nil(t, db.Write(wo, batch))
+	}
+
+	// Read back the remaining keys
+	{
+		// All keys on "cf2" are still there.
+		// Only key2 on "cf1" still remains
+		for h_idx := 1; h_idx <= 2; h_idx++ {
+			for k_idx := 0; k_idx <= 2; k_idx++ {
+				data, err := db.GetCF(ro, cf_handles[h_idx], []byte(fmt.Sprintf("%s_key_%d", test_cf_names[h_idx], k_idx)))
+				ensure.Nil(t, err)
+				if h_idx == 2 || k_idx == 2 {
+					ensure.DeepEqual(t, data.Data(), []byte(fmt.Sprintf("%s_value_%d", test_cf_names[h_idx], k_idx)))
+				} else {
+					ensure.True(t, len(data.Data()) == 0)
+				}
+			}
+		}
+	}
+}
+
 func TestTransactionDBCRUDColumnFamilies(t *testing.T) {
 	test_cf_names := []string{"default", "cf1", "cf2"}
 	db, cf_handles := newTestTransactionDBColumnFamilies(t, "TestOpenTransactionDbColumnFamilies", test_cf_names)
-	ensure.True(t, 3 == len(cf_handles))
+	ensure.True(t, len(cf_handles) == 3)
 	defer db.Close()
 
 	var (
