@@ -213,6 +213,17 @@ func (db *TransactionDB) PutCF(opts *WriteOptions, cf *ColumnFamilyHandle, key, 
 	return nil
 }
 
+// Write writes a WriteBatch to the database
+func (db *TransactionDB) Write(opts *WriteOptions, batch *WriteBatch) error {
+	var cErr *C.char
+	C.rocksdb_transactiondb_write(db.c, opts.c, batch.c, &cErr)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return errors.New(C.GoString(cErr))
+	}
+	return nil
+}
+
 // Delete removes the data associated with the key from the database.
 func (db *TransactionDB) Delete(opts *WriteOptions, key []byte) error {
 	var (
