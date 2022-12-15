@@ -171,7 +171,12 @@ func TestTransactionDBWriteBatchColumnFamilies(t *testing.T) {
 		}
 	}
 
-	// WriteBatch DeleteCF (DeleteRangeCF not implemented)
+	{ // WriteBatch with DeleteRangeCF not implemented
+		batch := NewWriteBatch()
+		batch.DeleteRangeCF(cf_handles[1], []byte(test_cf_names[1]+"_key_0"), []byte(test_cf_names[1]+"_key_2"))
+		ensure.NotNil(t, db.Write(wo, batch))
+	}
+	// WriteBatch DeleteCF
 	{
 		batch := NewWriteBatch()
 		batch.DeleteCF(cf_handles[1], []byte(test_cf_names[1]+"_key_0"))
