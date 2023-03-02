@@ -1086,6 +1086,13 @@ func (opts *Options) SetMaxSuccessiveMerges(value int) {
 	C.rocksdb_options_set_max_successive_merges(opts.c, C.size_t(value))
 }
 
+// SetDumpMallocStats will print malloc statistics to the LOG file for the
+// database if set to true - jemalloc must be turned on for this to work.
+// Default: false
+func (opts *Options) SetDumpMallocStats(value bool) {
+        C.rocksdb_options_set_dump_malloc_stats(opts.c, boolToChar(value))
+}
+
 // EnableStatistics enable statistics.
 func (opts *Options) EnableStatistics() {
 	C.rocksdb_options_enable_statistics(opts.c)
