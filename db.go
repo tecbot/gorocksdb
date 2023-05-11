@@ -674,6 +674,12 @@ func (db *DB) SetOptions(keys, values []string) error {
 		cKeys[i] = C.CString(keys[i])
 		cValues[i] = C.CString(values[i])
 	}
+	defer func() {
+		for i := range cKeys {
+			C.free(unsafe.Pointer(cKeys[i]))
+			C.free(unsafe.Pointer(cValues[i]))
+		}
+	}()
 
 	var cErr *C.char
 
@@ -705,6 +711,12 @@ func (db *DB) SetDBOptions(keys, values []string) error {
 		cKeys[i] = C.CString(keys[i])
 		cValues[i] = C.CString(values[i])
 	}
+	defer func() {
+		for i := range cKeys {
+			C.free(unsafe.Pointer(cKeys[i]))
+			C.free(unsafe.Pointer(cValues[i]))
+		}
+	}()
 
 	var cErr *C.char
 
