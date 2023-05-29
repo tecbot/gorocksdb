@@ -918,6 +918,14 @@ func (opts *Options) SetStatsDumpPeriodSec(value uint) {
 	C.rocksdb_options_set_stats_dump_period_sec(opts.c, C.uint(value))
 }
 
+// SetStatsPersistPeriodSec sets the stats persist period in seconds.
+//
+// If not zero, persist stats to LOG every stats_persist_period_sec
+// Default: 300 (5 min)
+func (opts *Options) SetStatsPersistPeriodSec(value uint) {
+	C.rocksdb_options_set_stats_persist_period_sec(opts.c, C.uint(value))
+}
+
 // SetAdviseRandomOnOpen specifies whether we will hint the underlying
 // file system that the file access pattern is random, when a sst file is opened.
 // Default: true
