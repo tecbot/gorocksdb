@@ -1215,7 +1215,7 @@ func (opts *Options) SetMaxSubCompactions(value int) {
 	C.rocksdb_options_set_max_subcompactions(opts.c, C.uint32_t(value))
 }
 
-// SetWriteBufferManager set write_bufffer_manager forthe option
+// SetWriteBufferManager set write_bufffer_manager for the option
 // The memory usage of memtable will report to this object. The same object
 // can be passed into multiple DBs and it will track the sum of size of all
 // the DBs. If the total size of all live memtables of all the DBs exceeds
@@ -1232,6 +1232,25 @@ func (opts *Options) SetMaxSubCompactions(value int) {
 // Default: null
 func (opts *Options) SetWriteBufferManager(w *WriteBufferManager) {
 	C.rocksdb_options_set_write_buffer_manager(opts.c, w.c)
+}
+
+// SetSstFileManager set sst_file_manager for the option
+// Use to track SST files and control their file deletion rate.
+//
+// Features:
+//  - Throttle the deletion rate of the SST files.
+//  - Keep track the total size of all SST files.
+//  - Set a maximum allowed space limit for SST files that when reached
+//    the DB wont do any further flushes or compactions and will set the
+//    background error.
+//  - Can be shared between multiple dbs.
+// Limitations:
+//  - Only track and throttle deletes of SST files in
+//    first db_path (db_name if db_paths is empty).
+//
+// Default: null
+func (opts *Options) SetSstFileManager(s *SstFileManager) {
+	C.rocksdb_options_set_sst_file_manager(opts.c, s.c)
 }
 
 // Destroy deallocates the Options object.
