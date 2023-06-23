@@ -34,7 +34,17 @@ func (db *TransactionDB) getDBforMemoryUsage() *C.rocksdb_t {
 
 // GetApproximateMemoryUsageByType returns summary
 // memory usage stats for given databases and caches.
-func GetApproximateMemoryUsageByType(dbs []DBForMemoryUsage, caches []*Cache) (*MemoryUsage, error) {
+func GetApproximateMemoryUsageByType(dbs []*DB, caches []*Cache) (*MemoryUsage, error) {
+	dbsForMemoryUsage := make([]DBForMemoryUsage, 0, len(dbs))
+	for _, db := range dbs {
+		dbsForMemoryUsage = append(dbsForMemoryUsage, db)
+	}
+	return GetApproximateMemoryUsageByTypeGenericDB(dbsForMemoryUsage, caches)
+}
+
+// GetApproximateMemoryUsageByTypeGenericDB returns summary
+// memory usage stats for given databases and caches.
+func GetApproximateMemoryUsageByTypeGenericDB(dbs []DBForMemoryUsage, caches []*Cache) (*MemoryUsage, error) {
 	// register memory consumers
 	consumers := C.rocksdb_memory_consumers_create()
 	defer C.rocksdb_memory_consumers_destroy(consumers)
