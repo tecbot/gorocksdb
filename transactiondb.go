@@ -268,8 +268,20 @@ func (db *TransactionDB) NewCheckpoint() (*Checkpoint, error) {
 	return NewNativeCheckpoint(cCheckpoint), nil
 }
 
+// NewIterator returns an Iterator over the database that uses the
+// ReadOptions given.
+func (db *TransactionDB) NewIterator(opts *ReadOptions) *Iterator {
+	return NewNativeIterator(unsafe.Pointer(C.rocksdb_transactiondb_create_iterator(db.c, opts.c)))
+}
+
+// NewIteratorCF returns an Iterator over the column family that uses the
+// ReadOptions given.
+func (db *TransactionDB) NewIteratorCF(opts *ReadOptions, cf *ColumnFamilyHandle) *Iterator {
+	return NewNativeIterator(unsafe.Pointer(C.rocksdb_transactiondb_create_iterator_cf(db.c, opts.c, cf.c)))
+}
+
 // Close closes the database.
-func (transactionDB *TransactionDB) Close() {
-	C.rocksdb_transactiondb_close(transactionDB.c)
-	transactionDB.c = nil
+func (db *TransactionDB) Close() {
+	C.rocksdb_transactiondb_close(db.c)
+	db.c = nil
 }

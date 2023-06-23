@@ -15,11 +15,6 @@ extern rocksdb_compactionfilter_t* gorocksdb_compactionfilter_create(uintptr_t i
 
 extern rocksdb_comparator_t* gorocksdb_comparator_create(uintptr_t idx);
 
-/* Filter Policy */
-
-extern rocksdb_filterpolicy_t* gorocksdb_filterpolicy_create(uintptr_t idx);
-extern void gorocksdb_filterpolicy_delete_filter(void* state, const char* v, size_t s);
-
 /* Merge Operator */
 
 extern rocksdb_mergeoperator_t* gorocksdb_mergeoperator_create(uintptr_t idx);

@@ -25,21 +25,6 @@ rocksdb_compactionfilter_t* gorocksdb_compactionfilter_create(uintptr_t idx) {
         (const char *(*)(void*))(gorocksdb_compactionfilter_name));
 }
 
-/* Filter Policy */
-
-rocksdb_filterpolicy_t* gorocksdb_filterpolicy_create(uintptr_t idx) {
-    return rocksdb_filterpolicy_create(
-        (void*)idx,
-        gorocksdb_destruct_handler,
-        (char* (*)(void*, const char* const*, const size_t*, int, size_t*))(gorocksdb_filterpolicy_create_filter),
-        (unsigned char (*)(void*, const char*, size_t, const char*, size_t))(gorocksdb_filterpolicy_key_may_match),
-        gorocksdb_filterpolicy_delete_filter,
-        (const char *(*)(void*))(gorocksdb_filterpolicy_name));
-}
-
-void gorocksdb_filterpolicy_delete_filter(void* state, const char* v, size_t s) {
-    free((char*)v);
-}
 
 /* Merge Operator */
 

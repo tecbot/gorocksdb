@@ -486,19 +486,6 @@ func (opts *Options) SetLevel0StopWritesTrigger(value int) {
 	C.rocksdb_options_set_level0_stop_writes_trigger(opts.c, C.int(value))
 }
 
-// SetMaxMemCompactionLevel sets the maximum level
-// to which a new compacted memtable is pushed if it does not create overlap.
-//
-// We try to push to level 2 to avoid the
-// relatively expensive level 0=>1 compactions and to avoid some
-// expensive manifest file operations. We do not push all the way to
-// the largest level since that can generate a lot of wasted disk
-// space if the same key space is being repeatedly overwritten.
-// Default: 2
-func (opts *Options) SetMaxMemCompactionLevel(value int) {
-	C.rocksdb_options_set_max_mem_compaction_level(opts.c, C.int(value))
-}
-
 // SetTargetFileSizeBase sets the target file size for compaction.
 //
 // Target file size is per-file size for level-1.
@@ -741,34 +728,6 @@ func (opts *Options) SetKeepLogFileNum(value int) {
 	C.rocksdb_options_set_keep_log_file_num(opts.c, C.size_t(value))
 }
 
-// SetSoftRateLimit sets the soft rate limit.
-//
-// Puts are delayed 0-1 ms when any level has a compaction score that exceeds
-// soft_rate_limit. This is ignored when == 0.0.
-// CONSTRAINT: soft_rate_limit <= hard_rate_limit. If this constraint does not
-// hold, RocksDB will set soft_rate_limit = hard_rate_limit
-// Default: 0.0 (disabled)
-func (opts *Options) SetSoftRateLimit(value float64) {
-	C.rocksdb_options_set_soft_rate_limit(opts.c, C.double(value))
-}
-
-// SetHardRateLimit sets the hard rate limit.
-//
-// Puts are delayed 1ms at a time when any level has a compaction score that
-// exceeds hard_rate_limit. This is ignored when <= 1.0.
-// Default: 0.0 (disabled)
-func (opts *Options) SetHardRateLimit(value float64) {
-	C.rocksdb_options_set_hard_rate_limit(opts.c, C.double(value))
-}
-
-// SetRateLimitDelayMaxMilliseconds sets the max time
-// a put will be stalled when hard_rate_limit is enforced.
-// If 0, then there is no limit.
-// Default: 1000
-func (opts *Options) SetRateLimitDelayMaxMilliseconds(value uint) {
-	C.rocksdb_options_set_rate_limit_delay_max_milliseconds(opts.c, C.uint(value))
-}
-
 // SetMaxManifestFileSize sets the maximal manifest file size until is rolled over.
 // The older manifest file be deleted.
 // Default: MAX_INT so that roll-over does not take place.
@@ -780,19 +739,6 @@ func (opts *Options) SetMaxManifestFileSize(value uint64) {
 // Default: 4
 func (opts *Options) SetTableCacheNumshardbits(value int) {
 	C.rocksdb_options_set_table_cache_numshardbits(opts.c, C.int(value))
-}
-
-// SetTableCacheRemoveScanCountLimit sets the count limit during a scan.
-//
-// During data eviction of table's LRU cache, it would be inefficient
-// to strictly follow LRU because this piece of memory will not really
-// be released unless its refcount falls to zero. Instead, make two
-// passes: the first pass will release items with refcount = 1,
-// and if not enough space releases after scanning the number of
-// elements specified by this parameter, we will remove items in LRU order.
-// Default: 16
-func (opts *Options) SetTableCacheRemoveScanCountLimit(value int) {
-	C.rocksdb_options_set_table_cache_remove_scan_count_limit(opts.c, C.int(value))
 }
 
 // SetArenaBlockSize sets the size of one block in arena memory allocation.
@@ -874,13 +820,6 @@ func (opts *Options) SetManifestPreallocationSize(value int) {
 	C.rocksdb_options_set_manifest_preallocation_size(opts.c, C.size_t(value))
 }
 
-// SetPurgeRedundantKvsWhileFlush enable/disable purging of
-// duplicate/deleted keys when a memtable is flushed to storage.
-// Default: true
-func (opts *Options) SetPurgeRedundantKvsWhileFlush(value bool) {
-	C.rocksdb_options_set_purge_redundant_kvs_while_flush(opts.c, boolToChar(value))
-}
-
 // SetAllowMmapReads enable/disable mmap reads for reading sst tables.
 // Default: false
 func (opts *Options) SetAllowMmapReads(value bool) {
@@ -910,14 +849,6 @@ func (opts *Options) SetUseDirectIOForFlushAndCompaction(value bool) {
 // Default: true
 func (opts *Options) SetIsFdCloseOnExec(value bool) {
 	C.rocksdb_options_set_is_fd_close_on_exec(opts.c, boolToChar(value))
-}
-
-// SetSkipLogErrorOnRecovery enable/disable skipping of
-// log corruption error on recovery (If client is ok with
-// losing most recent changes)
-// Default: false
-func (opts *Options) SetSkipLogErrorOnRecovery(value bool) {
-	C.rocksdb_options_set_skip_log_error_on_recovery(opts.c, boolToChar(value))
 }
 
 // SetStatsDumpPeriodSec sets the stats dump period in seconds.
