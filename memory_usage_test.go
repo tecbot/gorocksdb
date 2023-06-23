@@ -25,7 +25,7 @@ func TestMemoryUsage(t *testing.T) {
 	defer db.Close()
 
 	// take first memory usage snapshot
-	mu1, err := GetApproximateMemoryUsageByType([]DBForMemoryUsage{db}, []*Cache{cache})
+	mu1, err := GetApproximateMemoryUsageByType([]*DB{db}, []*Cache{cache})
 	ensure.Nil(t, err)
 
 	// perform IO operations that will affect in-memory tables (and maybe cache as well)
@@ -50,7 +50,7 @@ func TestMemoryUsage(t *testing.T) {
 	ensure.Nil(t, err)
 
 	// take second memory usage snapshot
-	mu2, err := GetApproximateMemoryUsageByType([]DBForMemoryUsage{db}, []*Cache{cache})
+	mu2, err := GetApproximateMemoryUsageByType([]*DB{db}, []*Cache{cache})
 	ensure.Nil(t, err)
 
 	// the amount of memory used by memtables should increase after write/read;
@@ -77,7 +77,7 @@ func TestMemoryUsageTransactionDB(t *testing.T) {
 	defer db.Close()
 
 	// take first memory usage snapshot
-	mu1, err := GetApproximateMemoryUsageByType([]DBForMemoryUsage{db}, []*Cache{cache})
+	mu1, err := GetApproximateMemoryUsageByTypeGenericDB([]DBForMemoryUsage{db}, []*Cache{cache})
 	ensure.Nil(t, err)
 
 	// perforx`m IO operations that will affect in-memory tables (and maybe cache as well)
@@ -102,7 +102,7 @@ func TestMemoryUsageTransactionDB(t *testing.T) {
 	ensure.Nil(t, err)
 
 	// take second memory usage snapshot
-	mu2, err := GetApproximateMemoryUsageByType([]DBForMemoryUsage{db}, []*Cache{cache})
+	mu2, err := GetApproximateMemoryUsageByTypeGenericDB([]DBForMemoryUsage{db}, []*Cache{cache})
 	ensure.Nil(t, err)
 
 	// the amount of memory used by memtables should increase after write/read;
