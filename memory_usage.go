@@ -35,11 +35,11 @@ func (db *TransactionDB) getNativeDB() *C.rocksdb_t {
 // GetApproximateMemoryUsageByType returns summary
 // memory usage stats for given databases and caches.
 func GetApproximateMemoryUsageByType(dbs []*DB, caches []*Cache) (*MemoryUsage, error) {
-	dbsForMemoryUsage := make([]NativeDB, 0, len(dbs))
+	nativeDBs := make([]NativeDB, 0, len(dbs))
 	for _, db := range dbs {
-		dbsForMemoryUsage = append(dbsForMemoryUsage, db)
+		nativeDBs = append(nativeDBs, db)
 	}
-	return GetApproximateMemoryUsageByTypeNativeDB(dbsForMemoryUsage, caches)
+	return GetApproximateMemoryUsageByTypeNativeDB(nativeDBs, caches)
 }
 
 // GetApproximateMemoryUsageByTypeNativeDB returns summary
