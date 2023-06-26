@@ -20,16 +20,38 @@ type MemoryUsage struct {
 	CacheTotal uint64
 }
 
+type NativeDB interface {
+	getNativeDB() *C.rocksdb_t
+}
+
+func (db *DB) getNativeDB() *C.rocksdb_t {
+	return db.c
+}
+
+func (db *TransactionDB) getNativeDB() *C.rocksdb_t {
+	return (*C.rocksdb_t)(db.c)
+}
+
 // GetApproximateMemoryUsageByType returns summary
 // memory usage stats for given databases and caches.
 func GetApproximateMemoryUsageByType(dbs []*DB, caches []*Cache) (*MemoryUsage, error) {
+	nativeDBs := make([]NativeDB, 0, len(dbs))
+	for _, db := range dbs {
+		nativeDBs = append(nativeDBs, db)
+	}
+	return GetApproximateMemoryUsageByTypeNativeDB(nativeDBs, caches)
+}
+
+// GetApproximateMemoryUsageByTypeNativeDB returns summary
+// memory usage stats for given databases and caches.
+func GetApproximateMemoryUsageByTypeNativeDB(dbs []NativeDB, caches []*Cache) (*MemoryUsage, error) {
 	// register memory consumers
 	consumers := C.rocksdb_memory_consumers_create()
 	defer C.rocksdb_memory_consumers_destroy(consumers)
 
 	for _, db := range dbs {
 		if db != nil {
-			C.rocksdb_memory_consumers_add_db(consumers, db.c)
+			C.rocksdb_memory_consumers_add_db(consumers, (db.getNativeDB()))
 		}
 	}
 	for _, cache := range caches {
