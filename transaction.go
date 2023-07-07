@@ -115,6 +115,25 @@ func (transaction *Transaction) GetForUpdateCF(opts *ReadOptions, cf *ColumnFami
 	return NewSlice(cValue, cValLen), nil
 }
 
+// GetPinnedForUpdateCF queries the data associated with the key in a given column family
+// and puts an exclusive lock on the key from the database given this transaction.
+// It uses a pinnable slice to improve performance by avoiding a memcpy.
+func (transaction *Transaction) GetPinnedForUpdateCF(opts *ReadOptions, cf *ColumnFamilyHandle, key []byte) (*PinnableSliceHandle, error) {
+	var (
+		cErr *C.char
+		cKey = byteToChar(key)
+	)
+
+	cHandle := C.rocksdb_transaction_get_pinned_for_update_cf(
+		transaction.c, opts.c, cf.c, cKey, C.size_t(len(key)), C.uchar(byte(1)) /*exclusive*/, &cErr,
+	)
+	if cErr != nil {
+		defer C.rocksdb_free(unsafe.Pointer(cErr))
+		return nil, errors.New(C.GoString(cErr))
+	}
+	return NewNativePinnableSliceHandle(cHandle), nil
+}
+
 // Put writes data associated with a key to the transaction.
 func (transaction *Transaction) Put(key, value []byte) error {
 	var (

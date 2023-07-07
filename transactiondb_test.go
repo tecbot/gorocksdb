@@ -314,6 +314,35 @@ func TestTransactionDBGetForUpdateColumnFamilies(t *testing.T) {
 	ensure.DeepEqual(t, val.Data(), []byte(test_cf_names[1]+"_value"))
 }
 
+func TestTransactionDBGetPinnedForUpdateColumnFamilies(t *testing.T) {
+	testCFNames := []string{"default", "cf1", "cf2"}
+	db, cfHandles := newTestTransactionDBColumnFamilies(t, "TestOpenTransactionDbColumnFamilies", testCFNames)
+	ensure.True(t, 3 == len(cfHandles))
+	defer db.Close()
+
+	var (
+		wo = NewDefaultWriteOptions()
+		ro = NewDefaultReadOptions()
+		to = NewDefaultTransactionOptions()
+	)
+
+	{
+		txn := db.TransactionBegin(wo, to, nil)
+		defer txn.Destroy()
+
+		val, err := txn.GetPinnedForUpdateCF(ro, cfHandles[1], []byte(testCFNames[1]+"_key"))
+		defer val.Destroy()
+		ensure.Nil(t, err)
+		txn.PutCF(cfHandles[1], []byte(testCFNames[1]+"_key"), []byte(testCFNames[1]+"_value"))
+		ensure.Nil(t, txn.Commit())
+	}
+
+	// Read after update
+	val, err := db.GetCF(ro, cfHandles[1], []byte(testCFNames[1]+"_key"))
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, val.Data(), []byte(testCFNames[1]+"_value"))
+}
+
 func newTestTransactionDB(t *testing.T, name string, applyOpts func(opts *Options, transactionDBOpts *TransactionDBOptions)) *TransactionDB {
 	dir, err := ioutil.TempDir("", "gorockstransactiondb-"+name)
 	ensure.Nil(t, err)
