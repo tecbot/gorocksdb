@@ -1021,7 +1021,7 @@ func (opts *Options) SetMaxSuccessiveMerges(value int) {
 // database if set to true - jemalloc must be turned on for this to work.
 // Default: false
 func (opts *Options) SetDumpMallocStats(value bool) {
-        C.rocksdb_options_set_dump_malloc_stats(opts.c, boolToChar(value))
+	C.rocksdb_options_set_dump_malloc_stats(opts.c, boolToChar(value))
 }
 
 // EnableStatistics enable statistics.
@@ -1178,6 +1178,37 @@ func (opts *Options) SetOptimizeFiltersForHits(value bool) {
 // Default: false
 func (opts *Options) SetAtomicFlush(value bool) {
 	C.rocksdb_options_set_atomic_flush(opts.c, C.uchar(btoi(value)))
+}
+
+// SetMaxSubcompactions represents the maximum number of threads that will
+// concurrently perform a compaction job by breaking it into multiple,
+// smaller ones that are run simultaneously.
+//
+// Default: 1 (i.e. no subcompactions)
+func (opts *Options) SetMaxSubcompactions(value uint32) {
+	C.rocksdb_options_set_max_subcompactions(opts.c, C.uint32_t(value))
+}
+
+// GetMaxSubcompactions gets the maximum number of threads that will
+// concurrently perform a compaction job by breaking it into multiple,
+// smaller ones that are run simultaneously.
+func (opts *Options) GetMaxSubcompactions() uint32 {
+	return uint32(C.rocksdb_options_get_max_subcompactions(opts.c))
+}
+
+// SetMaxBackgroundJobs maximum number of concurrent background jobs
+// (compactions and flushes).
+//
+// Default: 2
+//
+// Dynamically changeable through SetDBOptions() API.
+func (opts *Options) SetMaxBackgroundJobs(value int) {
+	C.rocksdb_options_set_max_background_jobs(opts.c, C.int(value))
+}
+
+// GetMaxBackgroundJobs returns maximum number of concurrent background jobs setting.
+func (opts *Options) GetMaxBackgroundJobs() int {
+	return int(C.rocksdb_options_get_max_background_jobs(opts.c))
 }
 
 // Destroy deallocates the Options object.
