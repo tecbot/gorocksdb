@@ -683,6 +683,7 @@ func (opts *Options) SetDeleteObsoleteFilesPeriodMicros(value uint64) {
 // concurrent background jobs, submitted to
 // the default LOW priority thread pool
 // Default: 1
+// Deprecated: use SetMaxBackgroundJobs, as rocksdb decides this automatically based on the value of MaxBackgroundJobs
 func (opts *Options) SetMaxBackgroundCompactions(value int) {
 	C.rocksdb_options_set_max_background_compactions(opts.c, C.int(value))
 }
@@ -699,6 +700,7 @@ func (opts *Options) SetMaxBackgroundCompactions(value int) {
 // potentially block memtable flush jobs of other db instances, leading to
 // unnecessary Put stalls.
 // Default: 0
+// Deprecated: use SetMaxBackgroundJobs, as rocksdb decides this automatically based on the value of MaxBackgroundJobs
 func (opts *Options) SetMaxBackgroundFlushes(value int) {
 	C.rocksdb_options_set_max_background_flushes(opts.c, C.int(value))
 }
