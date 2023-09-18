@@ -69,6 +69,17 @@ const (
 	SkipAnyCorruptedRecordsRecovery      = WALRecoveryMode(3)
 )
 
+// EncodingType The value will determine how to encode keys
+// when writing to a new SST file.
+type EncodingType int8
+
+const (
+	//Plain will always write full keys without any special encoding.
+	Plain = EncodingType(0)
+	// Prefix will find opportunity to write the same prefix once for multiple rows.
+	Prefix = EncodingType(1)
+)
+
 // Options represent all of the available options when opening a database with Open.
 type Options struct {
 	c *C.rocksdb_options_t
@@ -1095,8 +1106,19 @@ func (opts *Options) SetHashLinkListRep(bucketCount int) {
 // indexSparseness: inside each prefix, need to build one index record for how
 //
 //	many keys for binary search inside each hash bucket.
-func (opts *Options) SetPlainTableFactory(keyLen uint32, bloomBitsPerKey int, hashTableRatio float64, indexSparseness int) {
-	C.rocksdb_options_set_plain_table_factory(opts.c, C.uint32_t(keyLen), C.int(bloomBitsPerKey), C.double(hashTableRatio), C.size_t(indexSparseness))
+//
+// hugePageTlbSize: if <=0, allocate hash indexes and blooms from malloc. Otherwise from huge page TLB.
+//
+// encodingType: how to encode the keys. See enum EncodingType above for the choices.
+//
+// fullScanMode: mode for reading the whole file one record by one without using the index.
+//
+// storeIndexInFile: compute plain table index and bloom filter during
+//
+// file building and store it in file. When reading
+// file, index will be mapped instead of recomputation.
+func (opts *Options) SetPlainTableFactory(keyLen uint32, bloomBitsPerKey int, hashTableRatio float64, indexSparseness int, hugePageTlbSize int, encodingType EncodingType, fullScanMode bool, storeIndexInFile bool) {
+	C.rocksdb_options_set_plain_table_factory(opts.c, C.uint32_t(keyLen), C.int(bloomBitsPerKey), C.double(hashTableRatio), C.size_t(indexSparseness), C.size_t(hugePageTlbSize), C.char(encodingType), boolToChar(fullScanMode), boolToChar(storeIndexInFile))
 }
 
 // SetCreateIfMissingColumnFamilies specifies whether the column families
