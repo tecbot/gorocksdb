@@ -280,6 +280,11 @@ func (db *TransactionDB) NewIteratorCF(opts *ReadOptions, cf *ColumnFamilyHandle
 	return NewNativeIterator(unsafe.Pointer(C.rocksdb_transactiondb_create_iterator_cf(db.c, opts.c, cf.c)))
 }
 
+// UnsafeGetDB returns the underlying c rocksdb instance.
+func (db *TransactionDB) UnsafeGetDB() unsafe.Pointer {
+	return unsafe.Pointer(db.c)
+}
+
 // Close closes the database.
 func (db *TransactionDB) Close() {
 	C.rocksdb_transactiondb_close(db.c)
