@@ -417,6 +417,12 @@ func (opts *Options) SetCompression(value CompressionType) {
 	C.rocksdb_options_set_compression(opts.c, C.int(value))
 }
 
+// SetBottommostCompression sets the compression algorithm for the nth level.
+// Default: NoComprression
+func (opts *Options) SetBottommostCompression(value CompressionType) {
+	C.rocksdb_options_set_bottommost_compression(opts.c, C.int(value))
+}
+
 // SetCompressionPerLevel sets different compression algorithm per level.
 //
 // Different levels can have different compression policies. There
