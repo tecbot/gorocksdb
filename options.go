@@ -407,7 +407,7 @@ func (opts *Options) SetCompression(value CompressionType) {
 }
 
 // SetBottommostCompression sets the compression algorithm for the bottommost level (level with most data).
-// Default: NoComprression
+// Default: NoCompression
 func (opts *Options) SetBottommostCompression(value CompressionType) {
 	C.rocksdb_options_set_bottommost_compression(opts.c, C.int(value))
 }
