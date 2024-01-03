@@ -406,6 +406,12 @@ func (opts *Options) SetCompression(value CompressionType) {
 	C.rocksdb_options_set_compression(opts.c, C.int(value))
 }
 
+// SetBottommostCompression sets the compression algorithm for the bottommost level (level with most data).
+// Default: NoComprression
+func (opts *Options) SetBottommostCompression(value CompressionType) {
+	C.rocksdb_options_set_bottommost_compression(opts.c, C.int(value))
+}
+
 // SetCompressionPerLevel sets different compression algorithm per level.
 //
 // Different levels can have different compression policies. There
@@ -1090,7 +1096,7 @@ func (opts *Options) SetMaxSuccessiveMerges(value int) {
 // database if set to true - jemalloc must be turned on for this to work.
 // Default: false
 func (opts *Options) SetDumpMallocStats(value bool) {
-        C.rocksdb_options_set_dump_malloc_stats(opts.c, boolToChar(value))
+	C.rocksdb_options_set_dump_malloc_stats(opts.c, boolToChar(value))
 }
 
 // EnableStatistics enable statistics.
