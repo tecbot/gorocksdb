@@ -24,6 +24,11 @@ func boolToChar(b bool) C.uchar {
 	return 0
 }
 
+// charToBool converts C.uchar to bool value
+func charToBool(c C.uchar) bool {
+	return c != 0
+}
+
 // charToByte converts a *C.char to a byte slice.
 func charToByte(data *C.char, len C.size_t) []byte {
 	var value []byte
