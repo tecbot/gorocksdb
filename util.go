@@ -3,10 +3,7 @@ package gorocksdb
 // #include <stdlib.h>
 
 import "C"
-import (
-	"reflect"
-	"unsafe"
-)
+import "unsafe"
 
 // btoi converts a bool value to int.
 func btoi(b bool) int {
@@ -55,8 +52,7 @@ func cByteSlice(b []byte) *C.char {
 
 // stringToChar returns *C.char from string.
 func stringToChar(s string) *C.char {
-	ptrStr := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	return (*C.char)(unsafe.Pointer(ptrStr.Data))
+	return (*C.char)(unsafe.Pointer(unsafe.StringData(s)))
 }
 
 // charSlice converts a C array of *char to a []*C.char.
