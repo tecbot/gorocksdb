@@ -234,7 +234,8 @@ func (opts *Options) SetParanoidChecks(value bool) {
 //
 // For example, you have a flash device with 10GB allocated for the DB,
 // as well as a hard drive of 2TB, you should config it to be:
-//   [{"/flash_path", 10GB}, {"/hard_drive", 2TB}]
+//
+//	[{"/flash_path", 10GB}, {"/hard_drive", 2TB}]
 //
 // The system will try to guarantee data under each path is close to but
 // not larger than the target size. But current and future file sizes used
@@ -405,6 +406,12 @@ func (opts *Options) SetCompression(value CompressionType) {
 	C.rocksdb_options_set_compression(opts.c, C.int(value))
 }
 
+// SetBottommostCompression sets the compression algorithm for the bottommost level (level with most data).
+// Default: NoCompression
+func (opts *Options) SetBottommostCompression(value CompressionType) {
+	C.rocksdb_options_set_bottommost_compression(opts.c, C.int(value))
+}
+
 // SetCompressionPerLevel sets different compression algorithm per level.
 //
 // Different levels can have different compression policies. There
@@ -546,11 +553,12 @@ func (opts *Options) SetMaxBytesForLevelMultiplier(value float64) {
 // We will pick a base level b >= 1. L0 will be directly merged into level b,
 // instead of always into level 1. Level 1 to b-1 need to be empty.
 // We try to pick b and its target size so that
-// 1. target size is in the range of
-//   (max_bytes_for_level_base / max_bytes_for_level_multiplier,
-//    max_bytes_for_level_base]
-// 2. target size of the last level (level num_levels-1) equals to extra size
-//    of the level.
+//  1. target size is in the range of
+//     (max_bytes_for_level_base / max_bytes_for_level_multiplier,
+//     max_bytes_for_level_base]
+//  2. target size of the last level (level num_levels-1) equals to extra size
+//     of the level.
+//
 // At the same time max_bytes_for_level_multiplier and
 // max_bytes_for_level_multiplier_additional are still satisfied.
 //
@@ -821,17 +829,18 @@ func (opts *Options) SetWALRecoveryMode(mode WALRecoveryMode) {
 // SetWALTtlSeconds sets the WAL ttl in seconds.
 //
 // The following two options affect how archived logs will be deleted.
-// 1. If both set to 0, logs will be deleted asap and will not get into
-//    the archive.
-// 2. If wal_ttl_seconds is 0 and wal_size_limit_mb is not 0,
-//    WAL files will be checked every 10 min and if total size is greater
-//    then wal_size_limit_mb, they will be deleted starting with the
-//    earliest until size_limit is met. All empty files will be deleted.
-// 3. If wal_ttl_seconds is not 0 and wall_size_limit_mb is 0, then
-//    WAL files will be checked every wal_ttl_seconds / 2 and those that
-//    are older than wal_ttl_seconds will be deleted.
-// 4. If both are not 0, WAL files will be checked every 10 min and both
-//    checks will be performed with ttl being first.
+//  1. If both set to 0, logs will be deleted asap and will not get into
+//     the archive.
+//  2. If wal_ttl_seconds is 0 and wal_size_limit_mb is not 0,
+//     WAL files will be checked every 10 min and if total size is greater
+//     then wal_size_limit_mb, they will be deleted starting with the
+//     earliest until size_limit is met. All empty files will be deleted.
+//  3. If wal_ttl_seconds is not 0 and wall_size_limit_mb is 0, then
+//     WAL files will be checked every wal_ttl_seconds / 2 and those that
+//     are older than wal_ttl_seconds will be deleted.
+//  4. If both are not 0, WAL files will be checked every 10 min and both
+//     checks will be performed with ttl being first.
+//
 // Default: 0
 func (opts *Options) SetWALTtlSeconds(value uint64) {
 	C.rocksdb_options_set_WAL_ttl_seconds(opts.c, C.uint64_t(value))
@@ -851,6 +860,13 @@ func (opts *Options) SetWalSizeLimitMb(value uint64) {
 // Default: false
 func (opts *Options) SetEnablePipelinedWrite(value bool) {
 	C.rocksdb_options_set_enable_pipelined_write(opts.c, boolToChar(value))
+}
+
+// SetUnorderedWrite enables unordered writes
+//
+// Default: false
+func (opts *Options) SetUnorderedWrite(value bool) {
+	C.rocksdb_options_set_unordered_write(opts.c, boolToChar(value))
 }
 
 // SetManifestPreallocationSize sets the number of bytes
@@ -1036,7 +1052,9 @@ func (opts *Options) SetInplaceUpdateNumLocks(value int) {
 // If <=0, it won't allocate from huge page but from malloc.
 // Users are responsible to reserve huge pages for it to be allocated. For
 // example:
-//      sysctl -w vm.nr_hugepages=20
+//
+//	sysctl -w vm.nr_hugepages=20
+//
 // See linux doc Documentation/vm/hugetlbpage.txt
 // If there isn't enough free huge page available, it will fall back to
 // malloc.
@@ -1074,6 +1092,13 @@ func (opts *Options) SetMaxSuccessiveMerges(value int) {
 	C.rocksdb_options_set_max_successive_merges(opts.c, C.size_t(value))
 }
 
+// SetDumpMallocStats will print malloc statistics to the LOG file for the
+// database if set to true - jemalloc must be turned on for this to work.
+// Default: false
+func (opts *Options) SetDumpMallocStats(value bool) {
+	C.rocksdb_options_set_dump_malloc_stats(opts.c, boolToChar(value))
+}
+
 // EnableStatistics enable statistics.
 func (opts *Options) EnableStatistics() {
 	C.rocksdb_options_enable_statistics(opts.c)
@@ -1104,7 +1129,8 @@ func (opts *Options) SetMemtableVectorRep() {
 // bucketCount:             number of fixed array buckets
 // skiplistHeight:          the max height of the skiplist
 // skiplistBranchingFactor: probabilistic size ratio between adjacent
-//                          link lists in the skiplist
+//
+//	link lists in the skiplist
 func (opts *Options) SetHashSkipListRep(bucketCount int, skiplistHeight, skiplistBranchingFactor int32) {
 	C.rocksdb_options_set_hash_skip_list_rep(opts.c, C.size_t(bucketCount), C.int32_t(skiplistHeight), C.int32_t(skiplistBranchingFactor))
 }
@@ -1127,14 +1153,21 @@ func (opts *Options) SetHashLinkListRep(bucketCount int) {
 // a linear search is used.
 //
 // keyLen: 			plain table has optimization for fix-sized keys,
-// 					which can be specified via keyLen.
+//
+//	which can be specified via keyLen.
+//
 // bloomBitsPerKey: the number of bits used for bloom filer per prefix. You
-//                  may disable it by passing a zero.
+//
+//	may disable it by passing a zero.
+//
 // hashTableRatio:  the desired utilization of the hash table used for prefix
-//                  hashing. hashTableRatio = number of prefixes / #buckets
-//                  in the hash table
+//
+//	hashing. hashTableRatio = number of prefixes / #buckets
+//	in the hash table
+//
 // indexSparseness: inside each prefix, need to build one index record for how
-//                  many keys for binary search inside each hash bucket.
+//
+//	many keys for binary search inside each hash bucket.
 func (opts *Options) SetPlainTableFactory(keyLen uint32, bloomBitsPerKey int, hashTableRatio float64, indexSparseness int) {
 	C.rocksdb_options_set_plain_table_factory(opts.c, C.uint32_t(keyLen), C.int(bloomBitsPerKey), C.double(hashTableRatio), C.size_t(indexSparseness))
 }
@@ -1194,6 +1227,32 @@ func (opts *Options) SetMemTablePrefixBloomSizeRatio(value float64) {
 // Default: false
 func (opts *Options) SetOptimizeFiltersForHits(value bool) {
 	C.rocksdb_options_set_optimize_filters_for_hits(opts.c, C.int(btoi(value)))
+}
+
+// SetAtomicFlush sets atomic_flush
+// RocksDB supports atomic flush of multiple column families if the DB option
+// atomic_flush is set to true. The execution result of flushing multiple
+// column families is written to the MANIFEST with 'all-or-nothing' guarantee
+// (logically). With atomic flush, either all or no memtables of the column
+// families of interest are persisted to SST files and added to the database.
+//
+// This can be desirable if data in multiple column families must be consistent
+// with each other. For example, imagine there is one metadata column family
+// meta_cf, and a data column family data_cf. Every time we write a new record
+// to data_cf, we also write its metadata to meta_cf. meta_cf and data_cf must
+// be flushed atomically. Database becomes inconsistent if one of them is
+// persisted but the other is not. Atomic flush provides a good guarantee.
+// Suppose at a certain time, kv1 exists in the memtables of meta_cf and kv2
+// exists in the memtables of data_cf. After atomically flushing these two
+// column families, both kv1 and kv2 are persistent if the flush succeeds.
+// Otherwise neither of them exist in the database.
+//
+// Since atomic flush also goes through the write_thread, it is guaranteed that
+// no flush can occur in the middle of write batch.
+//
+// Default: false
+func (opts *Options) SetAtomicFlush(value bool) {
+	C.rocksdb_options_set_atomic_flush(opts.c, C.uchar(btoi(value)))
 }
 
 // Destroy deallocates the Options object.

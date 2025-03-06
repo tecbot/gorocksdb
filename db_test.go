@@ -2,6 +2,7 @@ package gorocksdb
 
 import (
 	"io/ioutil"
+	"os"
 	"strconv"
 	"testing"
 
@@ -11,6 +12,45 @@ import (
 func TestOpenDb(t *testing.T) {
 	db := newTestDB(t, "TestOpenDb", nil)
 	defer db.Close()
+}
+
+func TestOpenDbColumnFamiliesWithTTL(t *testing.T) {
+	dir, err := ioutil.TempDir("", "gorocksdb-TestOpenDbColumnFamiliesWithTtl")
+	ensure.Nil(t, err)
+
+	opts := NewDefaultOptions()
+	defer opts.Destroy()
+
+	opts.SetCreateIfMissing(true)
+	opts.SetCreateIfMissingColumnFamilies(true)
+
+	db, _, err := OpenDbColumnFamiliesWithTTL(opts, dir, []string{"default", "mycf"}, []*Options{opts, opts}, []int{3600, 3600})
+	defer db.Close()
+
+	ensure.Nil(t, err)
+}
+
+func TestCreateColumnFamilyWithTTL(t *testing.T) {
+	db := newTestDBWithTTL(t, "TestCreateColumnFamilyWithTTL", nil)
+	defer db.Close()
+
+	var (
+		givenKey = []byte("hello")
+		givenVal = []byte("world")
+		o        = NewDefaultOptions()
+		wo       = NewDefaultWriteOptions()
+		ro       = NewDefaultReadOptions()
+	)
+
+	cf, err := db.CreateColumnFamilyWithTTL(o, "cf", 3600)
+	ensure.Nil(t, err)
+
+	ensure.Nil(t, db.PutCF(wo, cf, givenKey, givenVal))
+
+	v, err := db.GetCF(ro, cf, givenKey)
+	defer v.Free()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, v.Data(), givenVal)
 }
 
 func TestDBCRUD(t *testing.T) {
@@ -141,6 +181,46 @@ func newTestDB(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
 	return db
 }
 
+func newTestDBWithTTL(t *testing.T, name string, applyOpts func(opts *Options)) *DB {
+	dir, err := ioutil.TempDir("", "gorocksdb-"+name)
+	ensure.Nil(t, err)
+
+	opts := NewDefaultOptions()
+	// test the ratelimiter
+	rateLimiter := NewRateLimiter(1024, 100*1000, 10)
+	opts.SetRateLimiter(rateLimiter)
+	opts.SetCreateIfMissing(true)
+	if applyOpts != nil {
+		applyOpts(opts)
+	}
+	db, err := OpenDbWithTTL(opts, dir, 3600)
+	ensure.Nil(t, err)
+
+	return db
+}
+
+func newSecondaryTestDB(t *testing.T, name string) *DB {
+	secondaryDir := name + "-secondary"
+
+	opts := NewDefaultOptions()
+	opts.SetMaxOpenFiles(-1)
+	db, err := OpenDbAsSecondary(opts, name, secondaryDir)
+	ensure.Nil(t, err)
+
+	return db
+}
+
+func newSecondaryTestDBCF(t *testing.T, name string, cfNames []string, cfOpts []*Options) (*DB, []*ColumnFamilyHandle) {
+	secondaryDir := name + "-secondary"
+
+	opts := NewDefaultOptions()
+	opts.SetMaxOpenFiles(-1)
+	db, handles, err := OpenDbAsSecondaryColumnFamilies(opts, name, secondaryDir, cfNames, cfOpts)
+	ensure.Nil(t, err)
+
+	return db, handles
+}
+
 func newTestDBPathNames(t *testing.T, name string, names []string, target_sizes []uint64, applyOpts func(opts *Options)) *DB {
 	ensure.DeepEqual(t, len(target_sizes), len(names))
 	ensure.NotDeepEqual(t, len(names), 0)
@@ -210,16 +290,19 @@ func TestDBGetApproximateSizes(t *testing.T) {
 	defer db.Close()
 
 	// no ranges
-	sizes := db.GetApproximateSizes(nil)
+	sizes, err := db.GetApproximateSizes(nil)
 	ensure.DeepEqual(t, len(sizes), 0)
+	ensure.Nil(t, err)
 
 	// range will nil start and limit
-	sizes = db.GetApproximateSizes([]Range{{Start: nil, Limit: nil}})
+	sizes, err = db.GetApproximateSizes([]Range{{Start: nil, Limit: nil}})
 	ensure.DeepEqual(t, sizes, []uint64{0})
+	ensure.Nil(t, err)
 
 	// valid range
-	sizes = db.GetApproximateSizes([]Range{{Start: []byte{0x00}, Limit: []byte{0xFF}}})
+	sizes, err = db.GetApproximateSizes([]Range{{Start: []byte{0x00}, Limit: []byte{0xFF}}})
 	ensure.DeepEqual(t, sizes, []uint64{0})
+	ensure.Nil(t, err)
 }
 
 func TestDBGetApproximateSizesCF(t *testing.T) {
@@ -232,14 +315,143 @@ func TestDBGetApproximateSizesCF(t *testing.T) {
 	ensure.Nil(t, err)
 
 	// no ranges
-	sizes := db.GetApproximateSizesCF(cf, nil)
+	sizes, err := db.GetApproximateSizesCF(cf, nil)
 	ensure.DeepEqual(t, len(sizes), 0)
+	ensure.Nil(t, err)
 
 	// range will nil start and limit
-	sizes = db.GetApproximateSizesCF(cf, []Range{{Start: nil, Limit: nil}})
+	sizes, err = db.GetApproximateSizesCF(cf, []Range{{Start: nil, Limit: nil}})
 	ensure.DeepEqual(t, sizes, []uint64{0})
+	ensure.Nil(t, err)
 
 	// valid range
-	sizes = db.GetApproximateSizesCF(cf, []Range{{Start: []byte{0x00}, Limit: []byte{0xFF}}})
+	sizes, err = db.GetApproximateSizesCF(cf, []Range{{Start: []byte{0x00}, Limit: []byte{0xFF}}})
 	ensure.DeepEqual(t, sizes, []uint64{0})
+	ensure.Nil(t, err)
+}
+
+func TestDBFlushCF(t *testing.T) {
+	var (
+		db = newTestDB(t, "TestDBFlushCF", nil)
+		o  = NewDefaultOptions()
+		wo = NewDefaultWriteOptions()
+		fo = NewDefaultFlushOptions()
+
+		key1 = []byte("hello1")
+		val1 = []byte("world1")
+	)
+	defer func() {
+		fo.Destroy()
+		wo.Destroy()
+		db.Close()
+	}()
+
+	cf, err := db.CreateColumnFamily(o, "other")
+	ensure.Nil(t, err)
+
+	// update
+	ensure.Nil(t, db.PutCF(wo, cf, key1, val1))
+
+	// flush CF
+	ensure.Nil(t, db.FlushCF(cf, fo))
+}
+
+func TestSecondaryDB(t *testing.T) {
+	var (
+		db          = newTestDB(t, "TestSecondaryDB", nil)
+		secondaryDB = newSecondaryTestDB(t, db.Name())
+		ro          = NewDefaultReadOptions()
+		wo          = NewDefaultWriteOptions()
+		fo          = NewDefaultFlushOptions()
+	)
+	defer func() {
+		fo.Destroy()
+		wo.Destroy()
+		ro.Destroy()
+		secondaryDB.Close()
+		db.Close()
+
+		os.RemoveAll(secondaryDB.SecondaryPath())
+		os.RemoveAll(db.Name())
+	}()
+
+	// Put a key into the primary database
+	ensure.Nil(t, db.Put(wo, []byte("hello"), []byte("world")))
+	ensure.Nil(t, db.Flush(fo))
+
+	// Ensure the key is written correctly
+	s, err := db.Get(ro, []byte("hello"))
+	ensure.Nil(t, err)
+	ensure.NotNil(t, s)
+
+	// Get the key from the secondary database, and ensure that we cannot see the key yet
+	s, err = secondaryDB.Get(ro, []byte("hello"))
+	ensure.Nil(t, err)
+	ensure.NotNil(t, s)
+	ensure.DeepEqual(t, s.Data(), []byte(nil))
+
+	// Catch up the secondary with the current state of the primary
+	err = secondaryDB.TryCatchUpWithPrimary()
+	ensure.Nil(t, err)
+
+	// Ensure that now that it has caught up that the key is now present
+	s, err = secondaryDB.Get(ro, []byte("hello"))
+	ensure.Nil(t, err)
+	ensure.NotNil(t, s)
+	ensure.DeepEqual(t, s.Data(), []byte("world"))
+}
+
+func TestSecondaryDBColumnFamilies(t *testing.T) {
+	var (
+		db = newTestDB(t, "TestSecondaryDB", nil)
+		o  = NewDefaultOptions()
+		ro = NewDefaultReadOptions()
+		wo = NewDefaultWriteOptions()
+		fo = NewDefaultFlushOptions()
+	)
+	defer func() {
+		fo.Destroy()
+		wo.Destroy()
+		ro.Destroy()
+		o.Destroy()
+		db.Close()
+
+		os.RemoveAll(db.Name())
+	}()
+
+	// Create a column family
+	primaryCF, err := db.CreateColumnFamily(o, "mycf")
+	ensure.Nil(t, err)
+
+	// Open a secondary database, opening the created column family
+	secondaryDB, handles := newSecondaryTestDBCF(t, db.Name(), []string{"default", "mycf"}, []*Options{o, o})
+	defer func() {
+		secondaryDB.Close()
+		os.RemoveAll(secondaryDB.SecondaryPath())
+	}()
+
+	// Put a key into the primary database
+	ensure.Nil(t, db.PutCF(wo, primaryCF, []byte("hello"), []byte("world")))
+	ensure.Nil(t, db.FlushCF(primaryCF, fo))
+
+	// Ensure the key is written correctly
+	s, err := db.GetCF(ro, primaryCF, []byte("hello"))
+	ensure.Nil(t, err)
+	ensure.NotNil(t, s)
+
+	// Get the key from the secondary database, and ensure that we cannot see the key yet
+	s, err = secondaryDB.GetCF(ro, handles[1], []byte("hello"))
+	ensure.Nil(t, err)
+	ensure.NotNil(t, s)
+	ensure.DeepEqual(t, s.Data(), []byte(nil))
+
+	// Catch up the secondary with the current state of the primary
+	err = secondaryDB.TryCatchUpWithPrimary()
+	ensure.Nil(t, err)
+
+	// Ensure that now that it has caught up that the key is now present
+	s, err = secondaryDB.GetCF(ro, handles[1], []byte("hello"))
+	ensure.Nil(t, err)
+	ensure.NotNil(t, s)
+	ensure.DeepEqual(t, s.Data(), []byte("world"))
 }
