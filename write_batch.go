@@ -1,6 +1,7 @@
 package gorocksdb
 
 // #include "rocksdb/c.h"
+// #include "gorocksdb.h"
 import "C"
 import (
 	"errors"
@@ -9,7 +10,8 @@ import (
 
 // WriteBatch is a batching of Puts, Merges and Deletes.
 type WriteBatch struct {
-	c *C.rocksdb_writebatch_t
+	c           *C.rocksdb_writebatch_t
+	charsSlices []charsSlice
 }
 
 // NewWriteBatch create a WriteBatch object.
@@ -19,7 +21,7 @@ func NewWriteBatch() *WriteBatch {
 
 // NewNativeWriteBatch create a WriteBatch object.
 func NewNativeWriteBatch(c *C.rocksdb_writebatch_t) *WriteBatch {
-	return &WriteBatch{c}
+	return &WriteBatch{c: c}
 }
 
 // WriteBatchFrom creates a write batch from a serialized WriteBatch.
@@ -41,10 +43,40 @@ func (wb *WriteBatch) PutCF(cf *ColumnFamilyHandle, key, value []byte) {
 	C.rocksdb_writebatch_put_cf(wb.c, cf.c, cKey, C.size_t(len(key)), cValue, C.size_t(len(value)))
 }
 
-// Append a blob of arbitrary size to the records in this batch.
-func (wb *WriteBatch) PutLogData(blob []byte) {
-	cBlob := byteToChar(blob)
-	C.rocksdb_writebatch_put_log_data(wb.c, cBlob, C.size_t(len(blob)))
+// PutMany queues many key and value pairs
+func (wb *WriteBatch) PutMany(keys, values [][]byte) error {
+	if len(keys) != len(values) {
+		return errors.New("Number of keys and values should be the same")
+	}
+	numPairs := C.size_t(len(keys))
+	cKeys, cKeySizes := byteSlicesToCSlices(keys)
+	cValues, cValueSizes := byteSlicesToCSlices(values)
+	wb.charsSlices = append(wb.charsSlices, cKeys, cValues)
+	C.gorocksdb_writebatch_put_many(
+		wb.c,
+		numPairs,
+		cKeys.c(), cKeySizes.c(),
+		cValues.c(), cValueSizes.c(),
+	)
+	return nil
+}
+
+// PutManyCF queues many key and value pairs in a column family
+func (wb *WriteBatch) PutManyCF(cf *ColumnFamilyHandle, keys, values [][]byte) error {
+	if len(keys) != len(values) {
+		return errors.New("Number of keys and values should be the same")
+	}
+	numPairs := C.size_t(len(keys))
+	cKeys, cKeySizes := byteSlicesToCSlices(keys)
+	cValues, cValueSizes := byteSlicesToCSlices(values)
+	wb.charsSlices = append(wb.charsSlices, cKeys, cValues)
+	C.gorocksdb_writebatch_put_many_cf(
+		wb.c, cf.c,
+		numPairs,
+		cKeys.c(), cKeySizes.c(),
+		cValues.c(), cValueSizes.c(),
+	)
+	return nil
 }
 
 // Merge queues a merge of "value" with the existing value of "key".
@@ -119,6 +151,9 @@ func (wb *WriteBatch) Clear() {
 func (wb *WriteBatch) Destroy() {
 	C.rocksdb_writebatch_destroy(wb.c)
 	wb.c = nil
+	for _, slice := range wb.charsSlices {
+		slice.Destroy()
+	}
 }
 
 // WriteBatchRecordType describes the type of a batch record.

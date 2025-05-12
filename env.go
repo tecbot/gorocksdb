@@ -13,11 +13,6 @@ func NewDefaultEnv() *Env {
 	return NewNativeEnv(C.rocksdb_create_default_env())
 }
 
-// NewMemEnv creates MemEnv for in-memory testing.
-func NewMemEnv() *Env {
-	return NewNativeEnv(C.rocksdb_create_mem_env())
-}
-
 // NewNativeEnv creates a Environment object.
 func NewNativeEnv(c *C.rocksdb_env_t) *Env {
 	return &Env{c}
@@ -36,6 +31,22 @@ func (env *Env) SetBackgroundThreads(n int) {
 // memtable flushes.
 func (env *Env) SetHighPriorityBackgroundThreads(n int) {
 	C.rocksdb_env_set_high_priority_background_threads(env.c, C.int(n))
+}
+
+func (env *Env) LowerThreadPoolIOPriority() {
+	C.rocksdb_env_lower_thread_pool_io_priority(env.c)
+}
+
+func (env *Env) LowerHighPriorityThreadPoolIOPriority() {
+	C.rocksdb_env_lower_high_priority_thread_pool_io_priority(env.c)
+}
+
+func (env *Env) LowerThreadPoolCPUPriority() {
+	C.rocksdb_env_lower_thread_pool_cpu_priority(env.c)
+}
+
+func (env *Env) LowerHighPriorityThreadPoolCPUPriority() {
+	C.rocksdb_env_lower_high_priority_thread_pool_cpu_priority(env.c)
 }
 
 // Destroy deallocates the Env object.

@@ -1,5 +1,6 @@
 package gorocksdb
 
+// #include <stdlib.h>
 // #include "rocksdb/c.h"
 import "C"
 import "unsafe"
@@ -23,7 +24,8 @@ const (
 // ReadOptions represent all of the available options when reading from a
 // database.
 type ReadOptions struct {
-	c *C.rocksdb_readoptions_t
+	c                  *C.rocksdb_readoptions_t
+	cIterateUpperBound *C.char
 }
 
 // NewDefaultReadOptions creates a default ReadOptions object.
@@ -33,7 +35,7 @@ func NewDefaultReadOptions() *ReadOptions {
 
 // NewNativeReadOptions creates a ReadOptions object.
 func NewNativeReadOptions(c *C.rocksdb_readoptions_t) *ReadOptions {
-	return &ReadOptions{c}
+	return &ReadOptions{c: c}
 }
 
 // UnsafeGetReadOptions returns the underlying c read options object.
@@ -46,17 +48,6 @@ func (opts *ReadOptions) UnsafeGetReadOptions() unsafe.Pointer {
 // Default: false
 func (opts *ReadOptions) SetVerifyChecksums(value bool) {
 	C.rocksdb_readoptions_set_verify_checksums(opts.c, boolToChar(value))
-}
-
-// SetPrefixSameAsStart Enforce that the iterator only iterates over the same
-// prefix as the seek.
-// This option is effective only for prefix seeks, i.e. prefix_extractor is
-// non-null for the column family and total_order_seek is false.  Unlike
-// iterate_upper_bound, prefix_same_as_start only works within a prefix
-// but in both directions.
-// Default: false
-func (opts *ReadOptions) SetPrefixSameAsStart(value bool) {
-	C.rocksdb_readoptions_set_prefix_same_as_start(opts.c, boolToChar(value))
 }
 
 // SetFillCache specify whether the "data block"/"index block"/"filter block"
@@ -104,9 +95,15 @@ func (opts *ReadOptions) SetTailing(value bool) {
 // implemented.
 // Default: nullptr
 func (opts *ReadOptions) SetIterateUpperBound(key []byte) {
-	cKey := byteToChar(key)
+	C.free(unsafe.Pointer(opts.cIterateUpperBound))
+	if key == nil {
+		opts.cIterateUpperBound = nil
+	} else {
+		opts.cIterateUpperBound = cByteSlice(key)
+	}
+
 	cKeyLen := C.size_t(len(key))
-	C.rocksdb_readoptions_set_iterate_upper_bound(opts.c, cKey, cKeyLen)
+	C.rocksdb_readoptions_set_iterate_upper_bound(opts.c, opts.cIterateUpperBound, cKeyLen)
 }
 
 // SetPinData specifies the value of "pin_data". If true, it keeps the blocks
@@ -132,5 +129,6 @@ func (opts *ReadOptions) SetReadaheadSize(value uint64) {
 // Destroy deallocates the ReadOptions object.
 func (opts *ReadOptions) Destroy() {
 	C.rocksdb_readoptions_destroy(opts.c)
-	opts.c = nil
+	C.free(unsafe.Pointer(opts.cIterateUpperBound))
+	*opts = ReadOptions{}
 }

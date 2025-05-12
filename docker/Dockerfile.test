@@ -1,0 +1,19 @@
+FROM golang:1.16.7-buster
+
+ENV GOBIN /go/bin
+
+RUN apt-get update && apt-get install -y openssh-client libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev \
+        liblz4-dev git-core curl wget perl bash g++ build-essential unzip
+
+RUN mkdir -p ~/.ssh/ && ssh-keyscan github.com > ~/.ssh/known_hosts
+RUN git config --global url."git@github.com:".insteadOf "https://github.com/"
+
+ENV CGO_CFLAGS="-I/rocksdb/include"
+ENV CGO_LDFLAGS="-L/rocksdb -lrocksdb -lstdc++ -lm -lz -lbz2 -lsnappy -llz4 -lzstd"
+
+ADD . /gorocksdb
+WORKDIR /gorocksdb
+
+RUN chmod +x /gorocksdb/docker/entrypoint.sh
+
+ENTRYPOINT ["/gorocksdb/docker/entrypoint.sh"]

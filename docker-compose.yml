@@ -1,0 +1,24 @@
+version: "3"
+
+services:
+  test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.test
+    image: test.gorocksdb.getstream.io
+    container_name: test.gorocksdb.getstream.io
+    profiles:
+      - test
+    command:
+      - go
+      - test
+      - -v
+    volumes:
+      - ~/.ssh:/root/.ssh:ro
+      - rocksdb.gorocksdb.getstream.io:/rocksdb
+      - gocache.gorocksdb.getstream.io:/root/.cache/go-build
+      - gopath.gorocksdb.getstream.io:/go
+volumes:
+  rocksdb.gorocksdb.getstream.io:
+  gocache.gorocksdb.getstream.io:
+  gopath.gorocksdb.getstream.io:

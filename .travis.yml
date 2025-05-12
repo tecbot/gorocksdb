@@ -1,8 +1,7 @@
-dist: xenial
 language: go
 go:
-  - 1.12.x
-  - 1.13.x
+  - '1.10'
+  - 1.11
   - tip
 
 before_install:
@@ -17,8 +16,9 @@ before_install:
   - sudo dpkg -i libgflags-dev_2.0-1.1ubuntu1_amd64.deb
 
 install:
-  - git clone https://github.com/facebook/rocksdb.git /tmp/rocksdb
+  - git clone https://github.com/GetStream/rocksdb.git /tmp/rocksdb
   - pushd /tmp/rocksdb
+  - git checkout add-lower-priority-c-bindings
   - make clean
   - make shared_lib -j`nproc`
   - sudo cp --preserve=links ./librocksdb.* /usr/lib/
@@ -27,7 +27,7 @@ install:
   - go get -t ./...
 
 script:
-  - go test -v ./
+  - GODEBUG=cgocheck=2 go test -v ./
 
 notifications:
   email:

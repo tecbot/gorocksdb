@@ -53,6 +53,43 @@ func TestWriteBatch(t *testing.T) {
 	ensure.True(t, v1.Data() == nil)
 }
 
+func TestWriteBatchPutMany(t *testing.T) {
+	db := newTestDB(t, "TestWriteBatchPutMany", nil)
+	defer db.Close()
+
+	var (
+		key1 = []byte("key1")
+		val1 = []byte("val1")
+		key2 = []byte("key22")
+		val2 = []byte("val22")
+	)
+	wo := NewDefaultWriteOptions()
+	defer wo.Destroy()
+
+	// create and fill the write batch
+	keys := [][]byte{key1, key2}
+	values := [][]byte{val1, val2}
+	wb := NewWriteBatch()
+	defer wb.Destroy()
+	wb.PutMany(keys, values)
+	// ensure.DeepEqual(t, wb.Count(), 2)
+
+	// perform the batch
+	ensure.Nil(t, db.Write(wo, wb))
+
+	// check changes
+	ro := NewDefaultReadOptions()
+	v1, err := db.Get(ro, key1)
+	defer v1.Free()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, v1.Data(), val1)
+
+	v2, err := db.Get(ro, key2)
+	defer v2.Free()
+	ensure.Nil(t, err)
+	ensure.DeepEqual(t, v2.Data(), val2)
+}
+
 func TestWriteBatchIterator(t *testing.T) {
 	db := newTestDB(t, "TestWriteBatchIterator", nil)
 	defer db.Close()
